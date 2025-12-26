@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import DashboardChart from '@/components/DashboardChart';
 import KPICard from '@/components/KPICard';
+import DownloadPDFButton from "@/components/DownloadPDFButton";
 import * as XLSX from 'xlsx';
 
 export default function DashboardBuilder() {
@@ -222,6 +223,7 @@ export default function DashboardBuilder() {
         </div>
 
         <div className="flex items-center gap-3">
+            <DownloadPDFButton targetId="dashboard-content" fileName={dashboard.name} />
             <button 
               disabled={!dashboard.datasetId}
               onClick={() => setShowWidgetModal(true)}
@@ -233,6 +235,7 @@ export default function DashboardBuilder() {
       </div>
 
       {/* Widgets Display */}
+      <div id="dashboard-content" className="p-4 -m-4 bg-slate-950"> {/* Wrapper for PDF capture */}
       {widgets.length === 0 ? (
         <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl">
           <p className="text-slate-500">No widgets yet. Add a Chart or KPI to get started.</p>
@@ -244,7 +247,7 @@ export default function DashboardBuilder() {
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {widgets.filter(w => w.type === 'kpi').map((widget) => (
                     <div key={widget._id} className="relative group">
-                      <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" data-html2canvas-ignore>
                          <button onClick={() => deleteWidget(widget._id)} className="p-2 bg-slate-900/80 text-red-400 rounded-lg hover:bg-red-500/20">
                              <Trash2 size={16} />
                          </button>
@@ -275,7 +278,7 @@ export default function DashboardBuilder() {
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                  {widgets.filter(w => w.type !== 'kpi').map((widget) => (
                      <div key={widget._id} className="relative group">
-                         <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" data-html2canvas-ignore>
                              <button onClick={() => deleteWidget(widget._id)} className="p-2 bg-slate-900/80 text-red-400 rounded-lg hover:bg-red-500/20">
                                  <Trash2 size={16} />
                              </button>
@@ -294,6 +297,7 @@ export default function DashboardBuilder() {
            )}
         </div>
       )}
+      </div>
 
       {/* Add Widget Modal */}
       {showWidgetModal && (

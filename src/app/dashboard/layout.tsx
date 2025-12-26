@@ -13,13 +13,33 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [trialInfo, setTrialInfo] = useState<{days: number, isPaid: boolean} | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
 
   useEffect(() => {
-    // Basic auth check
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-    }
+    // Basic auth check & Trial Info
+    const checkAuth = async () => {
+        try {
+            const res = await fetch('/api/auth/me');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.user) {
+                     const end = new Date(data.user.trialEndsAt);
+                     const now = new Date();
+                     const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                     setTrialInfo({ days: diff, isPaid: data.user.isPaid });
+                }
+            } else {
+                router.push('/login');
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setUserLoading(false);
+        }
+    };
+    
+    checkAuth();
   }, [router]);
 
   const handleLogout = () => {
@@ -98,6 +118,23 @@ export default function DashboardLayout({
         } p-8`}
       >
         <div className="max-w-7xl mx-auto">
+          {/* Trial Banner */}
+          {!userLoading && trialInfo && !trialInfo.isPaid && (
+             <div className={`mb-6 p-4 rounded-lg flex justify-between items-center ${
+                 trialInfo.days <= 5 ? 'bg-orange-500/10 border border-orange-500/20 text-orange-500' : 'bg-blue-600/10 border border-blue-600/20 text-blue-400'
+             }`}>
+                <div className="flex items-center gap-3">
+                   <div className={`w-2 h-2 rounded-full ${trialInfo.days <= 5 ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
+                   <span className="font-medium">
+                     {trialInfo.days <= 0 ? 'Trial Expired' : `Trial ends in ${trialInfo.days} days`}
+                   </span>
+                </div>
+                <Link href="/pricing" className={`text-sm font-semibold hover:underline ${trialInfo.days <= 5 ? 'text-orange-500' : 'text-blue-400'}`}>
+                   Upgrade Now &rarr;
+                </Link>
+             </div>
+          )}
+
           {children}
         </div>
       </main>

@@ -4,16 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusCircle, MoreVertical, Edit2, Trash2, Layout } from 'lucide-react';
 
-export default function DashboardList({ dashboards }: { dashboards: any[] }) {
+export default function DashboardList({ dashboards, onDelete }: { dashboards: any[], onDelete: (id: string) => void }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if(!confirm('Are you sure you want to delete this dashboard?')) return;
-    
-    await fetch(`/api/dashboards/${id}`, { method: 'DELETE' });
-    router.refresh();
+    if(confirm('Are you sure you want to delete this dashboard?')) {
+        onDelete(id);
+    }
   };
 
   return (

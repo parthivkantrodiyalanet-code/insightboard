@@ -39,11 +39,18 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
+    const now = new Date();
+    const trialEnds = new Date(now);
+    trialEnds.setDate(trialEnds.getDate() + 15);
+
     const newUser = await User.create({
       name: body.name,
       email: body.email,
       password: hashedPassword,
       role: body.role || 'user',
+      trialStartedAt: now,
+      trialEndsAt: trialEnds,
+      isPaid: false,
     });
 
     const { password, ...userWithoutPassword } = newUser.toObject();

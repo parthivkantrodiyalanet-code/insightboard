@@ -1,27 +1,17 @@
 import Link from 'next/link';
+import MarketingNavbar from '@/components/MarketingNavbar';
 import { ArrowRight, BarChart2, Lock, Zap } from 'lucide-react';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-white overflow-hidden relative">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      {/* Navbar */}
-      <nav className="relative z-10 container mx-auto px-6 py-6 flex justify-between items-center">
-        <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-          InsightBoard
-        </div>
-        <div className="space-x-4">
-          <Link href="/login" className="text-slate-300 hover:text-white transition-colors">Login</Link>
-          <Link href="/register" className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-all font-medium">
-            Sign Up
-          </Link>
-        </div>
-      </nav>
+      <MarketingNavbar />
 
       {/* Hero */}
       <main className="relative z-10 container mx-auto px-6 pt-20 pb-32 text-center">
@@ -85,6 +75,41 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+       {/* Footer */}
+       <footer className="border-t border-slate-800 bg-slate-900/50 relative z-10">
+           <div className="container mx-auto px-6 py-12">
+               <div className="grid md:grid-cols-4 gap-8 mb-8">
+                   <div className="col-span-1 md:col-span-2">
+                       <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-4">
+                           InsightBoard
+                       </h2>
+                       <p className="text-slate-400 max-w-sm">
+                           Turn your data into actionable insights with the fastest dashboard builder on the market.
+                       </p>
+                   </div>
+                   <div>
+                       <h4 className="font-bold mb-4 text-white">Product</h4>
+                       <ul className="space-y-2 text-slate-400 text-sm">
+                           <li><Link href="/pricing" className="hover:text-blue-400">Pricing</Link></li>
+                           <li><Link href="/dashboard" className="hover:text-blue-400">Dashboard</Link></li>
+                           <li><Link href="/testimonials" className="hover:text-blue-400">Testimonials</Link></li>
+                       </ul>
+                   </div>
+                   <div>
+                       <h4 className="font-bold mb-4 text-white">Company</h4>
+                       <ul className="space-y-2 text-slate-400 text-sm">
+                           <li><Link href="/about" className="hover:text-blue-400">About Us</Link></li>
+                           <li><Link href="/contact" className="hover:text-blue-400">Contact</Link></li>
+                           <li><Link href="/login" className="hover:text-blue-400">Sign In</Link></li>
+                       </ul>
+                   </div>
+               </div>
+               <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
+                   © {new Date().getFullYear()} InsightBoard. All rights reserved.
+               </div>
+           </div>
+       </footer>
     </div>
   );
 }

@@ -38,6 +38,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, data } = body;
 
+    // Limit Check
+    const user = await import('@/models/User').then(mod => mod.default.findById(userId));
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    if (!user.isPaid) {
+        // Dataset Count Limit
+        const count = await Dataset.countDocuments({ userId });
+        if (count >= 3) {
+            return NextResponse.json({ error: 'Free tier limit reached (Max 3 Datasets). Please upgrade.' }, { status: 400 });
+        }
+        
+        // Row Limit
+        if (Array.isArray(data) && data.length > 5000) {
+             return NextResponse.json({ error: 'Free tier limit reached (Max 5,000 rows). Please upgrade.' }, { status: 400 });
+        }
+    }
+
     const dataset = await Dataset.create({
         userId,
         name,

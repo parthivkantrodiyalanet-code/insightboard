@@ -1,0 +1,965 @@
+================================================================================
+                         INSIGHTBOARD PROJECT SUMMARY
+================================================================================
+
+Project Name: InsightBoard
+Type: Full-Stack MERN Application
+Purpose: Excel Data Visualization & Dashboard Management Platform
+Version: 0.1.0
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+InsightBoard is a comprehensive web application that enables users to:
+- Upload Excel files and convert them into interactive datasets
+- Create multiple dashboards to visualize and analyze data
+- Generate beautiful, customizable charts and widgets
+- Manage datasets and dashboards through an intuitive interface
+- Secure authentication system with JWT-based access control
+
+Key Tagline: "Turn Data into Decisions"
+
+The application provides a modern, user-friendly interface for data analytics 
+without requiring any coding knowledge.
+
+================================================================================
+2. TECHNOLOGY STACK
+================================================================================
+
+FRONTEND:
+- Framework: Next.js 16.0.10 (React 19.2.1)
+- UI Framework: React DOM 19.2.1
+- Styling: Tailwind CSS 4.0
+- Visualization: Recharts 3.6.0 (Interactive charts - bar, line, area, scatter)
+- Icons: Lucide React 0.561.0
+- Type Safety: TypeScript 5.0
+- CSS Utilities: Tailwind Merge 3.4.0, CLSX 2.1.1
+
+BACKEND:
+- Runtime: Node.js (via Next.js API Routes)
+- Framework: Next.js 16.0.10 (API Routes for REST endpoints)
+- Database: MongoDB (via Mongoose 9.0.2)
+- Authentication: JWT (jsonwebtoken 9.0.3)
+- Password Hashing: bcryptjs 3.0.3
+- File Processing: XLSX 0.18.5 (Excel file parsing)
+
+DEVELOPMENT TOOLS:
+- Linting: ESLint 9.0
+- Package Manager: npm
+- Compiler: Babel with React Compiler
+
+================================================================================
+3. PROJECT STRUCTURE & ARCHITECTURE
+================================================================================
+
+Root Directory Structure:
+- create_test_excel.js          : Test data generation script
+- package.json                  : Project dependencies and scripts
+- tsconfig.json                 : TypeScript configuration
+- next.config.ts                : Next.js configuration
+- postcss.config.mjs            : PostCSS configuration for Tailwind
+- eslint.config.mjs             : ESLint rules
+- README.md                      : Basic project documentation
+
+SRC/ DIRECTORY STRUCTURE:
+
+src/
+├── middleware.ts               : Authentication & authorization middleware
+├── app/                        : Next.js App Router structure
+│   ├── globals.css            : Global styles
+│   ├── layout.tsx             : Root layout component
+│   ├── page.tsx               : Home/Landing page
+│   ├── (auth)/                : Auth group layout (no URL prefix)
+│   │   ├── login/page.tsx     : Login page
+│   │   └── register/page.tsx  : Registration page
+│   ├── api/                   : API routes (REST endpoints)
+│   │   ├── auth/
+│   │   │   ├── login/route.ts         : Login endpoint
+│   │   │   └── me/route.ts            : Get current user endpoint
+│   │   ├── charts/
+│   │   │   └── route.ts               : Create & fetch charts
+│   │   ├── dashboards/
+│   │   │   ├── route.ts               : Create & fetch dashboards
+│   │   │   └── [id]/route.ts          : Get specific dashboard
+│   │   ├── datasets/
+│   │   │   └── route.ts               : Upload & fetch datasets
+│   │   ├── users/
+│   │   │   └── route.ts               : User management
+│   │   └── widgets/
+│   │       └── route.ts               : Widget management
+│   └── dashboard/              : Protected dashboard pages
+│       ├── layout.tsx          : Dashboard layout wrapper
+│       ├── page.tsx            : Dashboards overview
+│       ├── [id]/page.tsx       : Individual dashboard view
+│       ├── new/page.tsx        : Create new dashboard
+│       └── profile/page.tsx    : User profile page
+├── components/                 : Reusable React components
+│   ├── DashboardChart.tsx      : Chart rendering component (supports Bar, Line, Area)
+│   ├── DashboardList.tsx       : Dashboard listing component
+│   └── KPICard.tsx             : Key Performance Indicator card
+├── lib/
+│   └── db.ts                   : MongoDB connection utility
+└── models/                     : Mongoose database schemas
+    ├── User.ts                 : User schema (name, email, password, role)
+    ├── Dashboard.ts            : Dashboard schema (userId, datasetId, name)
+    ├── Dataset.ts              : Dataset schema (userId, name, data array)
+    ├── Widget.ts               : Widget schema (dashboardId, type, config)
+    └── Chart.ts                : Chart schema (userId, datasetId, config)
+
+================================================================================
+4. DATA MODELS & DATABASE SCHEMA
+================================================================================
+
+USER MODEL:
+- _id: ObjectId (Auto-generated)
+- name: String (Required) - User's full name
+- email: String (Required, Unique) - User's email address
+- password: String (Required) - Hashed password using bcryptjs
+- role: String (Enum: 'user' | 'admin', Default: 'user') - User permissions
+- createdAt: Timestamp - Account creation time
+- updatedAt: Timestamp - Last update time
+
+DATASET MODEL:
+- _id: ObjectId (Auto-generated)
+- userId: ObjectId (Reference to User) - Owner of dataset
+- name: String (Required) - Dataset name/filename
+- data: Array (Required) - Array of data objects (Excel rows)
+- createdAt: Timestamp
+- updatedAt: Timestamp
+
+DASHBOARD MODEL:
+- _id: ObjectId (Auto-generated)
+- userId: ObjectId (Reference to User, Required) - Dashboard owner
+- datasetId: ObjectId (Reference to Dataset) - Linked dataset (Optional)
+- name: String (Required) - Dashboard name
+- description: String (Optional) - Dashboard description
+- createdAt: Timestamp
+- updatedAt: Timestamp
+
+WIDGET MODEL:
+- _id: ObjectId (Auto-generated)
+- dashboardId: ObjectId (Reference to Dashboard, Required) - Parent dashboard
+- title: String (Required) - Widget title
+- type: String (Enum: 'bar'|'line'|'pie'|'area'|'scatter'|'kpi') - Chart type
+- config: Object (Required) - Configuration object:
+  * For Chart Widgets:
+    - xAxisKey: String - Data field for X-axis
+    - yAxisKey: String - Data field for Y-axis
+    - color: String - Chart color hex value
+  * For KPI Widgets:
+    - column: String - Data column to calculate
+    - operation: String - Operation ('sum', 'avg', 'count', 'max', 'min')
+    - label: String - Display label
+- createdAt: Timestamp
+- updatedAt: Timestamp
+
+CHART MODEL (Referenced in API):
+- _id: ObjectId (Auto-generated)
+- userId: ObjectId (Reference to User)
+- datasetId: ObjectId (Reference to Dataset) - Data source
+- title: String - Chart title
+- type: String - Chart type
+- xAxisKey: String - X-axis data field
+- yAxisKey: String - Y-axis data field
+- color: String - Chart color
+
+================================================================================
+5. API ENDPOINTS & FUNCTIONALITY
+================================================================================
+
+AUTHENTICATION ENDPOINTS:
+
+POST /api/auth/login
+- Purpose: User login
+- Request Body: { email: string, password: string }
+- Response: { token: string, user: { _id, name, email, role } }
+- Error Codes: 400 (missing fields), 401 (invalid credentials), 500 (server error)
+- Logic: 
+  * Validate email and password
+  * Find user in database
+  * Compare password with hashed password using bcryptjs
+  * Generate JWT token (expires in 1 day)
+  * Return token and user data
+
+GET /api/auth/me
+- Purpose: Get current authenticated user
+- Auth Required: JWT token in header or cookie
+- Response: Current user object
+- Logic: Decode JWT token and return user data
+
+USER ENDPOINTS:
+
+POST /api/users
+- Purpose: User registration
+- Request Body: { name: string, email: string, password: string }
+- Response: { user: { _id, name, email, role } }
+- Logic:
+  * Validate input fields
+  * Check if email already exists
+  * Hash password using bcryptjs
+  * Create new user in database
+  * Return user data (without password)
+
+DATASET ENDPOINTS:
+
+GET /api/datasets
+- Purpose: Fetch all datasets for authenticated user
+- Auth Required: Yes (JWT token)
+- Response: Array of datasets [ { _id, name, createdAt, updatedAt }, ... ]
+- Logic:
+  * Extract userId from JWT token
+  * Query Dataset collection for userId
+  * Return only name and timestamps (not full data array for performance)
+
+POST /api/datasets
+- Purpose: Create new dataset by uploading Excel data
+- Auth Required: Yes
+- Request Body: { name: string, data: Array<Object> }
+- Response: { _id, userId, name, data, createdAt, updatedAt }
+- Logic:
+  * Parse Excel file into data array
+  * Extract userId from JWT token
+  * Create Dataset document in MongoDB
+  * Return created dataset
+
+DASHBOARD ENDPOINTS:
+
+GET /api/dashboards
+- Purpose: Fetch all dashboards for authenticated user
+- Auth Required: Yes
+- Response: Array of dashboards
+- Logic:
+  * Extract userId from JWT token
+  * Find all dashboards owned by user
+  * Populate datasetId references
+  * Return dashboard list
+
+POST /api/dashboards
+- Purpose: Create new dashboard
+- Auth Required: Yes
+- Request Body: { name: string, description?: string, datasetId?: ObjectId }
+- Response: { _id, userId, name, description, datasetId, createdAt }
+- Logic:
+  * Validate dashboard name
+  * Create Dashboard document
+  * Link to dataset if provided
+
+GET /api/dashboards/[id]
+- Purpose: Fetch specific dashboard with all widgets
+- Auth Required: Yes
+- Response: Dashboard with populated widgets and dataset
+- Logic:
+  * Retrieve dashboard by ID
+  * Verify ownership (userId match)
+  * Populate widgets array
+  * Populate dataset reference
+
+WIDGET ENDPOINTS:
+
+POST /api/widgets
+- Purpose: Create widget on dashboard
+- Auth Required: Yes
+- Request Body: { dashboardId, title, type, config }
+- Response: Created widget object
+- Logic:
+  * Validate widget type is supported
+  * Create Widget document
+  * Validate config object for chart type
+  * Return created widget
+
+GET /api/widgets/:dashboardId
+- Purpose: Fetch all widgets for a dashboard
+- Response: Array of widgets with configurations
+- Logic:
+  * Find all widgets for given dashboardId
+  * Return widget configurations
+
+CHARTS ENDPOINTS:
+
+POST /api/charts
+- Purpose: Create chart with linked dataset
+- Auth Required: Yes
+- Request Body: { datasetName, data, chartConfig }
+- Response: { chart, dataset }
+- Logic:
+  * Create new Dataset from uploaded data
+  * Create Chart linked to dataset
+  * Return both created objects
+- Process:
+  1. Extract userId from JWT token
+  2. Create Dataset in MongoDB
+  3. Create Chart with reference to dataset
+  4. Return both objects
+
+GET /api/charts
+- Purpose: Fetch all charts for user
+- Auth Required: Yes
+- Response: Array of charts with populated datasets
+- Logic:
+  * Find all charts owned by user
+  * Populate dataset references
+  * Return chart list with data
+
+================================================================================
+6. AUTHENTICATION & AUTHORIZATION FLOW
+================================================================================
+
+MIDDLEWARE PROTECTION (src/middleware.ts):
+
+Protected Routes:
+- /dashboard/* (all dashboard subroutes)
+  * Requires valid JWT token in cookies
+  * Redirects to /login if token missing
+  
+Auth Routes:
+- /login
+- /register
+  * Redirects to /dashboard if token exists (already authenticated)
+
+Token Management:
+- Stored in HTTP-only cookies (set during login)
+- Transmitted in Authorization header for API calls
+- JWT includes: { userId, role }
+- Expires in: 1 day (24 hours)
+
+SECURITY MEASURES:
+- Passwords hashed using bcryptjs (secure one-way hashing)
+- JWT tokens with expiration
+- Cookie-based token storage (httpOnly in production)
+- Middleware-level route protection
+- Role-based access control (user vs admin)
+
+================================================================================
+7. KEY COMPONENTS & UI
+================================================================================
+
+LANDING PAGE (src/app/page.tsx):
+- Hero section with animated gradients
+- Call-to-action buttons (Get Started, Try Dashboard)
+- Feature highlights
+- Navbar with Login/Sign Up links
+- Responsive design with mobile support
+- Glassmorphism design (frosted glass effect)
+
+LOGIN PAGE (src/app/(auth)/login/page.tsx):
+- Email/password input fields
+- Form validation
+- JWT token cookie setting on successful login
+- Error message display
+- Link to registration page
+- Redirect to dashboard on success
+
+REGISTER PAGE (src/app/(auth)/register/page.tsx):
+- Name, email, password input fields
+- Form validation
+- Password confirmation
+- User creation logic
+- Auto-login after registration (sets token cookie)
+- Redirect to dashboard
+
+DASHBOARD OVERVIEW (src/app/dashboard/page.tsx):
+- List of all user's dashboards
+- Fetch dashboards from /api/dashboards
+- Loading indicator (spinner)
+- Dashboard list component
+- Create new dashboard button
+- Statistics display
+
+DASHBOARD LAYOUT (src/app/dashboard/layout.tsx):
+- Navigation sidebar
+- User profile section
+- Dashboard list quick access
+- Logo/branding
+- Theme toggle (if implemented)
+
+INDIVIDUAL DASHBOARD (src/app/dashboard/[id]/page.tsx):
+- Grid layout for widgets
+- Multiple chart visualizations
+- Dashboard editing options
+- Add new widgets button
+- Export functionality (if implemented)
+
+CREATE DASHBOARD (src/app/dashboard/new/page.tsx):
+- Form to name new dashboard
+- Dataset selection dropdown
+- Create button
+- Preview of what will be created
+
+PROFILE PAGE (src/app/dashboard/profile/page.tsx):
+- User information display
+- Edit profile section
+- Change password
+- Account settings
+- Logout button
+
+DASHBOARD CHART COMPONENT (DashboardChart.tsx):
+Supported Chart Types:
+1. BAR CHART
+   - Vertical bars representing data
+   - X-axis: Category data
+   - Y-axis: Numerical values
+   - Best for: Comparing values across categories
+
+2. LINE CHART
+   - Connected line showing data trends
+   - Interactive dots on hover
+   - X-axis: Time or categories
+   - Y-axis: Numerical values
+   - Best for: Showing trends over time
+
+3. AREA CHART
+   - Line chart with filled area underneath
+   - Semi-transparent fill for visual appeal
+   - X-axis: Time or categories
+   - Y-axis: Numerical values
+   - Best for: Showing cumulative trends
+
+Features:
+- Responsive container (adapts to screen size)
+- Custom tooltip on hover
+- Configurable colors
+- Dark theme optimized (slate colors)
+- Error handling for missing data
+
+DASHBOARD LIST COMPONENT (DashboardList.tsx):
+- Displays cards/list of dashboards
+- Shows dashboard name and description
+- Last modified timestamp
+- Quick action buttons (Edit, Delete, View)
+- Create new dashboard card
+- Empty state message if no dashboards
+
+KPI CARD COMPONENT (KPICard.tsx):
+- Single metric display
+- Large number with label
+- Trend indicator (up/down)
+- Color coded (green for positive, red for negative)
+- Used for key business metrics
+
+================================================================================
+8. USER FLOW & WORKFLOW
+================================================================================
+
+USER FLOW DIAGRAM:
+
+START
+  |
+  v
+[Landing Page]
+  |
+  +---> Not Logged In? ---> [Login Page] ---> Authenticate
+  |                               |
+  |                         Forgot Password?
+  |                               |
+  |                         [Password Reset]
+  |
+  +---> New User? ---> [Registration Page] ---> Create Account
+  |                           |
+  |                           v
+  |                    [Email Verification]
+  |                           |
+  |                           v
+  v
+[Dashboard Overview Page]
+  |
+  +---> View Existing Dashboard ---> [Dashboard Detail Page]
+  |           |
+  |           v
+  |      [View Charts/Widgets]
+  |           |
+  |           v
+  |      [Edit Dashboard]
+  |      [Add/Remove Widgets]
+  |      [Export Data]
+  |
+  +---> Create New Dashboard ---> [New Dashboard Form]
+  |           |
+  |           v
+  |      Upload Excel File / Select Existing Dataset
+  |           |
+  |           v
+  |      [Dataset Preview]
+  |           |
+  |           v
+  |      Configure Visualizations
+  |      [Select Chart Types]
+  |      [Configure Axes/Metrics]
+  |           |
+  |           v
+  |      [Create Dashboard]
+  |           |
+  |           v
+  |      [Dashboard Created]
+  |
+  +---> Manage Profile ---> [Profile Page]
+  |           |
+  |           v
+  |      [Edit Profile Info]
+  |      [Change Password]
+  |      [View Preferences]
+  |
+  +---> Logout
+            |
+            v
+       [Landing Page]
+
+DETAILED WORKFLOW:
+
+REGISTRATION FLOW:
+1. User clicks "Sign Up" on landing page
+2. Redirected to /register
+3. User enters: name, email, password
+4. Form validates input
+5. Password is hashed using bcryptjs
+6. User created in MongoDB database
+7. JWT token generated and stored in cookie
+8. Auto-login occurs
+9. Redirected to /dashboard (overview)
+
+LOGIN FLOW:
+1. User clicks "Login" on landing page
+2. Redirected to /login
+3. User enters: email, password
+4. Form validates input
+5. Backend queries User collection by email
+6. Password compared with stored hash using bcryptjs
+7. If match: JWT token created (userId + role)
+8. Token stored in HTTP-only cookie
+9. Redirected to /dashboard
+10. Middleware validates token on route access
+
+DASHBOARD CREATION FLOW:
+1. User on /dashboard (overview)
+2. Clicks "Create New Dashboard" button
+3. Redirected to /dashboard/new
+4. User enters dashboard name and description
+5. User selects or uploads dataset:
+   a. Upload Excel file
+   b. File parsed using XLSX library
+   c. Data converted to JSON array
+   d. Dataset created in MongoDB
+   OR
+   c. Select existing dataset from dropdown
+6. User clicks "Create Dashboard"
+7. Dashboard created in database (userId linked)
+8. User redirected to new dashboard detail page
+9. Dataset linked to dashboard
+
+DATA VISUALIZATION FLOW:
+1. User on dashboard detail page (/dashboard/[id])
+2. Clicks "Add Widget" button
+3. Widget creation modal opens
+4. User selects widget type (Chart, KPI, Table)
+5. For Chart Widget:
+   a. Select chart type (bar, line, area, pie, scatter)
+   b. Choose X-axis data field
+   c. Choose Y-axis data field
+   d. Select color
+   e. Enter widget title
+6. For KPI Widget:
+   a. Select column to measure
+   b. Select operation (sum, avg, count, max, min)
+   c. Enter label
+7. User clicks "Create Widget"
+8. Widget created in database (dashboardId linked)
+9. Widget renders on dashboard with data visualization
+10. Widget displays in responsive grid layout
+
+CHART RENDERING FLOW:
+1. Dashboard loads widgets from /api/widgets/:dashboardId
+2. For each widget:
+   a. Fetch associated dataset from datasetId reference
+   b. Extract data array from dataset
+   c. DashboardChart component receives chartData
+3. Component renders based on type:
+   a. Map data to chart library (Recharts)
+   b. Use xAxisKey and yAxisKey to extract values
+   c. Apply color configuration
+   d. Add tooltips, labels, and styling
+4. Chart displays responsively in 400px height container
+5. User can hover for detailed tooltips
+6. Charts update if underlying data changes
+
+LOGOUT FLOW:
+1. User on any page
+2. Clicks logout button
+3. Token cookie deleted/cleared
+4. Redirected to landing page (/home)
+5. Middleware prevents access to /dashboard/* without token
+
+================================================================================
+9. PROJECT FEATURES & CAPABILITIES
+================================================================================
+
+CORE FEATURES:
+
+1. USER AUTHENTICATION
+   - User registration with validation
+   - Secure login with JWT
+   - Password encryption with bcryptjs
+   - Session management (1 day token expiry)
+   - Role-based access (user/admin)
+
+2. DATA MANAGEMENT
+   - Excel file upload and parsing (XLSX support)
+   - Dataset storage in MongoDB
+   - Multiple datasets per user
+   - Dataset preview and metadata viewing
+   - Data validation and error handling
+
+3. DASHBOARD MANAGEMENT
+   - Create unlimited dashboards
+   - Link datasets to dashboards
+   - Dashboard naming and descriptions
+   - Dashboard listing and overview
+   - Dashboard deletion (if implemented)
+
+4. DATA VISUALIZATION
+   - Multiple chart types:
+     * Bar Charts
+     * Line Charts
+     * Area Charts
+     * Pie Charts (support in schema)
+     * Scatter Plots (support in schema)
+   - Customizable colors
+   - Responsive sizing
+   - Interactive tooltips
+   - Axis configuration (X and Y)
+
+5. WIDGET SYSTEM
+   - Chart widgets (visualization)
+   - KPI cards (single metrics)
+   - Flexible configuration per type
+   - Widget grid layout
+   - Add/remove widgets dynamically
+
+6. USER PROFILE
+   - Profile viewing
+   - Profile editing
+   - Password management
+   - Account preferences
+
+7. DATA SECURITY
+   - JWT-based authentication
+   - Hashed passwords (bcryptjs)
+   - User-specific data isolation
+   - Middleware route protection
+   - Role-based authorization
+
+FUTURE ENHANCEMENT OPPORTUNITIES:
+
+- Real-time collaboration on dashboards
+- Scheduled email reports
+- Data refresh automation
+- Advanced filtering and aggregation
+- Custom SQL queries
+- Machine learning insights
+- Export to PDF/image formats
+- Dashboard sharing and public links
+- Data retention policies
+- Activity logging and audit trails
+- Multi-database support
+- Team/organization management
+- Advanced permission controls
+
+================================================================================
+10. TECHNICAL IMPLEMENTATION DETAILS
+================================================================================
+
+EXCEL FILE PROCESSING:
+- Library: XLSX (0.18.5)
+- Process:
+  1. File uploaded via API endpoint
+  2. XLSX.read() parses Excel workbook
+  3. Sheet data extracted as array of objects
+  4. Each row becomes an object with column headers as keys
+  5. Data stored in Dataset.data array field
+
+CHART RENDERING PIPELINE:
+1. Frontend: DashboardChart component receives widget config
+2. Data Access: Component accesses chartData.datasetId.data array
+3. Mapping: Recharts library maps data using xAxisKey/yAxisKey
+4. Rendering: Appropriate chart type rendered with custom styling
+5. Interactivity: Hover tooltips and animations enabled
+6. Responsiveness: ResponsiveContainer ensures mobile compatibility
+
+JWT TOKEN FLOW:
+1. Login: User credentials validated
+2. Generation: jwt.sign() creates token with userId and role
+3. Storage: Token stored in HTTP-only cookie
+4. Transmission: Sent in Authorization header or Cookie header
+5. Verification: jwt.verify() validates token signature
+6. Expiration: Token expires after 1 day (86400 seconds)
+7. Refresh: User must login again after expiration
+
+DATABASE CONNECTION:
+- MongoDB connection via Mongoose
+- Connection string from environment variable
+- Connection pooling managed by Mongoose
+- Schema validation at document creation
+- Indexes on userId for query optimization
+
+STYLING & UI DESIGN:
+- Framework: Tailwind CSS 4.0 (utility-first)
+- Dark Theme: Slate color palette (slate-950, slate-400, etc.)
+- Glass Effect: backdrop-blur and transparency for modern look
+- Animations: Fade-in, slide-in, spin effects
+- Gradients: Blue to purple gradients for branding
+- Responsive: Mobile-first design with breakpoints (sm, md, lg)
+
+ERROR HANDLING:
+- API Level: Try-catch blocks with specific error responses
+- Validation: Input validation before database operations
+- User Feedback: Error messages displayed in UI
+- Logging: Console.error for server-side debugging
+- Status Codes: 
+  * 200: Success
+  * 201: Created
+  * 400: Bad Request
+  * 401: Unauthorized
+  * 500: Server Error
+
+================================================================================
+11. DEPLOYMENT & RUNNING THE PROJECT
+================================================================================
+
+PREREQUISITES:
+- Node.js (v18 or higher)
+- npm or yarn package manager
+- MongoDB instance (local or cloud)
+- Environment variables configured
+
+INSTALLATION:
+1. Clone repository
+2. cd insightboard
+3. npm install (installs all dependencies)
+
+ENVIRONMENT SETUP:
+Create .env.local file with:
+- MONGODB_URI=mongodb://localhost:27017/insightboard
+- JWT_SECRET=your-secret-key-here
+- NODE_ENV=development
+
+RUNNING DEVELOPMENT SERVER:
+npm run dev
+- Server runs on http://localhost:3000
+- Hot reload enabled for changes
+- Terminal shows build errors
+
+BUILD FOR PRODUCTION:
+npm run build
+- Optimizes and bundles all code
+- Creates .next directory
+- Performs type checking
+- Minifies assets
+
+START PRODUCTION SERVER:
+npm start
+- Runs optimized production build
+- Better performance than dev mode
+- Production-ready deployment
+
+LINTING:
+npm run lint
+- Checks code quality with ESLint
+- Reports formatting and syntax issues
+- Helps maintain code standards
+
+COMMON COMMANDS:
+npm run dev          - Development server
+npm run build        - Production build
+npm start            - Start production server
+npm run lint         - Check code quality
+npm test             - Run tests (if configured)
+
+================================================================================
+12. FILE UPLOAD & DATA INTEGRATION
+================================================================================
+
+EXCEL TO DATA FLOW:
+1. User selects Excel file in UI
+2. File sent to /api/datasets POST endpoint
+3. XLSX.read() parses Excel workbook
+4. Data extracted as array of objects
+   Example:
+   [
+     { "Month": "Jan", "Sales": 4000, "Users": 240 },
+     { "Month": "Feb", "Sales": 3000, "Users": 221 },
+     { "Month": "Mar", "Sales": 5000, "Users": 229 }
+   ]
+5. Dataset document created:
+   {
+     userId: ObjectId("..."),
+     name: "Sales Data",
+     data: [ ... array above ... ],
+     createdAt: "2024-12-26T..."
+   }
+6. Response sent back with datasetId
+7. Frontend stores datasetId for dashboard linking
+
+CHART CONFIGURATION:
+Dataset created, user configures visualization:
+{
+  type: "bar",
+  xAxisKey: "Month",
+  yAxisKey: "Sales",
+  color: "#3b82f6",
+  title: "Monthly Sales"
+}
+
+When rendering:
+- Recharts library uses data array
+- Maps each object: x = data[i]["Month"], y = data[i]["Sales"]
+- Creates bar chart visualization
+- Applies blue color to bars
+- Displays "Monthly Sales" as title
+
+================================================================================
+13. PERFORMANCE CONSIDERATIONS
+================================================================================
+
+DATABASE OPTIMIZATION:
+- Indexes on userId for faster queries
+- Populate() used for efficient foreign key resolution
+- Only necessary fields selected (select('field1 field2'))
+- Connection pooling managed by Mongoose
+
+FRONTEND OPTIMIZATION:
+- Code splitting via Next.js routing
+- Images optimized (if using next/image)
+- CSS minified with Tailwind
+- JavaScript bundled and minified for production
+- React 19.2.1 with automatic batching
+
+CHART RENDERING:
+- ResponsiveContainer prevents unnecessary re-renders
+- Debouncing on resize events
+- Limited data points in tooltips
+- SVG rendering for scalability
+
+NETWORK OPTIMIZATION:
+- API calls limited to necessary data
+- Datasets streamed without full data in list view
+- Token reuse in cookies (no redundant auth calls)
+
+================================================================================
+14. SECURITY NOTES
+================================================================================
+
+IMPLEMENTED SECURITY:
+✓ Password hashing with bcryptjs (one-way encryption)
+✓ JWT token-based authentication (stateless)
+✓ HTTP-only cookies (prevents XSS attacks on tokens)
+✓ Middleware-level route protection
+✓ CORS handling (if configured)
+✓ Input validation on backend
+✓ User data isolation (userId checks)
+
+RECOMMENDED ADDITIONAL SECURITY:
+- HTTPS enforcement in production
+- Rate limiting on login attempts
+- CSRF token protection
+- Input sanitization for XSS prevention
+- SQL/NoSQL injection prevention (Mongoose handles this)
+- Regular security audits
+- Dependency vulnerability scanning
+- Environment variable encryption
+- API key rotation policy
+- Backup and disaster recovery plan
+
+================================================================================
+15. TESTING & DEBUGGING
+================================================================================
+
+DEBUGGING TOOLS:
+- Browser DevTools (Chrome/Firefox/Safari)
+- Network tab to inspect API calls
+- Console tab for JavaScript errors
+- React DevTools browser extension
+- MongoDB Compass for database inspection
+- Postman for API endpoint testing
+
+COMMON ISSUES & SOLUTIONS:
+
+Issue: "Unauthorized" error when accessing dashboard
+Solution:
+- Check if JWT token is in cookies
+- Verify token hasn't expired (1 day)
+- Check if user _id matches database
+- Clear cookies and login again
+
+Issue: Charts not displaying
+Solution:
+- Verify dataset has data array populated
+- Check xAxisKey and yAxisKey match actual data fields
+- Ensure chart type is supported (bar, line, area)
+- Check browser console for errors
+
+Issue: Dataset upload fails
+Solution:
+- Verify Excel file format (.xlsx)
+- Check file size (not too large)
+- Ensure MongoDB connection is active
+- Check JWT token is valid
+
+Issue: Database connection fails
+Solution:
+- Verify MONGODB_URI environment variable is set
+- Check MongoDB service is running
+- Verify connection string format
+- Check firewall/network access
+
+================================================================================
+16. NEXT STEPS FOR DEVELOPMENT
+================================================================================
+
+1. TESTING IMPLEMENTATION
+   - Unit tests for components (Jest/React Testing Library)
+   - Integration tests for API endpoints
+   - E2E tests with Playwright or Cypress
+   - Test coverage target: >80%
+
+2. PERFORMANCE OPTIMIZATION
+   - Implement caching strategies
+   - Database query optimization
+   - CDN for static assets
+   - Image optimization
+
+3. FEATURE EXPANSION
+   - Advanced filtering and search
+   - Data export (CSV, PDF)
+   - Scheduled report generation
+   - Real-time data updates
+   - Collaborative features
+
+4. UI/UX IMPROVEMENTS
+   - Theme customization
+   - Dark/Light mode toggle
+   - Mobile app (React Native)
+   - Accessibility (WCAG compliance)
+   - Internationalization (i18n)
+
+5. INFRASTRUCTURE
+   - Docker containerization
+   - CI/CD pipeline setup
+   - Monitoring and logging
+   - Database backup automation
+   - Load balancing setup
+
+6. DOCUMENTATION
+   - API documentation (Swagger/OpenAPI)
+   - User guide and tutorials
+   - Developer documentation
+   - Architecture decision records
+
+================================================================================
+END OF PROJECT SUMMARY
+================================================================================
+
+Document Generated: December 26, 2025
+Project Version: 0.1.0
+Status: Active Development
+
+For questions or clarifications, refer to the codebase and inline comments.
+================================================================================

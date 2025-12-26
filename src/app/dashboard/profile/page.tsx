@@ -71,6 +71,52 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Subscription Section */}
+      <div className="glass-card p-8">
+          <h3 className="text-xl font-bold text-white mb-6">Subscription Plan</h3>
+          
+          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700 mb-6">
+              <div>
+                  <p className="text-xs text-slate-500 uppercase font-semibold">Current Plan</p>
+                  <p className="text-xl font-bold text-white mt-1">
+                      {user.isPaid ? 'Pro Plan' : 'Free Trial'}
+                  </p>
+                  <p className="text-sm text-slate-400 mt-1">
+                      {user.isPaid 
+                        ? 'Unlimited Access' 
+                        : (new Date(user.trialEndsAt) > new Date() 
+                            ? `Trial ends on ${new Date(user.trialEndsAt).toLocaleDateString()}` 
+                            : 'Trial Expired')
+                      }
+                  </p>
+              </div>
+              <div className={`px-4 py-2 rounded-full text-sm font-bold ${
+                  user.isPaid 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : (new Date(user.trialEndsAt) > new Date() ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400')
+              }`}>
+                  {user.isPaid 
+                    ? 'Active' 
+                    : (new Date(user.trialEndsAt) > new Date() ? 'Trial Active' : 'Expired')
+                  }
+              </div>
+          </div>
+
+          {!user.isPaid && (
+              <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-6 rounded-xl border border-blue-500/30">
+                  <div className="flex justify-between items-center">
+                      <div>
+                          <h4 className="text-lg font-semibold text-white">Upgrade to Pro</h4>
+                          <p className="text-slate-400 text-sm mt-1">Unlock unlimited dashboards and remove limits.</p>
+                      </div>
+                      <a href="/pricing" className="btn-primary py-2 px-4 text-sm">
+                          View Plans
+                      </a>
+                  </div>
+              </div>
+          )}
+      </div>
     </div>
   );
 }

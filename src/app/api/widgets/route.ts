@@ -31,6 +31,15 @@ export async function POST(request: NextRequest) {
     const dashboard = await Dashboard.findOne({ _id: body.dashboardId, userId });
     if (!dashboard) return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 });
 
+    // Limit Check
+    const user = await import('@/models/User').then(mod => mod.default.findById(userId));
+    if (!user.isPaid) {
+        const count = await Widget.countDocuments({ dashboardId: body.dashboardId });
+        if (count >= 8) {
+             return NextResponse.json({ error: 'Free tier limit reached (Max 8 Widgets per Dashboard). Please upgrade.' }, { status: 400 });
+        }
+    }
+
     const widget = await Widget.create({
       dashboardId: body.dashboardId,
       title: body.title,

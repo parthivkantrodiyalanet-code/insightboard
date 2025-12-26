@@ -19,6 +19,24 @@ const UserSchema = new Schema({
     enum: ['user', 'admin'],
     default: 'user',
   },
+  trialStartedAt: {
+    type: Date,
+  },
+  trialEndsAt: {
+    type: Date,
+  },
+  isPaid: {
+    type: Boolean,
+    default: false,
+  },
+  stripeCustomerId: {
+    type: String,
+    default: null,
+  },
+  stripeSubscriptionId: {
+    type: String,
+    default: null,
+  },
 }, { timestamps: true });
 
 const User = models.User || model('User', UserSchema);
