@@ -15,7 +15,6 @@ export default function DashboardOverviewPage() {
   const fetchDashboards = async () => {
     try {
       const res = await fetch('/api/dashboards', { method: 'GET' });
-      console.log(res);
       if (res.ok) {
         const data = await res.json();
         setDashboards(data);

@@ -66,9 +66,10 @@ export default function DashboardChart({ chartData }: DashboardChartProps) {
     <div className="glass-card p-6 h-[400px] flex flex-col">
       <h3 className="text-lg font-semibold mb-4 text-slate-200">{title}</h3>
       <div className="flex-1 w-full min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
-        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height={300}>
+  {renderChart()}
+</ResponsiveContainer>
+
       </div>
     </div>
   );

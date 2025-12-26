@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
+import mongoose from 'mongoose';
 import connectToDatabase from '@/lib/db';
 import Dashboard from '@/models/Dashboard';
 import Widget from '@/models/Widget';
@@ -26,10 +27,19 @@ export async function GET(request: NextRequest) {
     const userId = await getUserFromToken(request);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const dashboards = await Dashboard.find({ userId }).sort({ updatedAt: -1 }).populate('datasetId', 'name createdAt');
-    console.log(dashboards);
+    const dashboards = await Dashboard.find({ 
+      userId: new mongoose.Types.ObjectId(userId) 
+    })
+    .sort({ updatedAt: -1 })
+    .populate({
+      path: 'datasetId',
+      model: Dataset,
+      select: 'name createdAt'
+    });
+
     return NextResponse.json(dashboards);
   } catch (error) {
+    console.error('Fetch dashboards error:', error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }
