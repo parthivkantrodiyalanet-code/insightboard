@@ -2,25 +2,13 @@ import { NextResponse, NextRequest } from 'next/server';
 import mongoose from 'mongoose';
 import connectToDatabase from '@/lib/db';
 import Dashboard from '@/models/Dashboard';
-import Widget from '@/models/Widget';
 import Dataset from '@/models/Dataset'; // Ensure models are registered
-import jwt from 'jsonwebtoken';
+import { getUserFromToken } from '@/lib/api/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-
-/* Helper */
-async function getUserFromToken(request: NextRequest) {
-  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.split(' ')[1];
-  if (!token) return null;
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-    return decoded.userId;
-  } catch (error) {
-    return null;
-  }
-}
-
-/* GET Handler */
+/**
+ * GET /api/dashboards
+ * Retrieves all dashboards for the authenticated user
+ */
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -56,10 +44,10 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     
     if (!user.isPaid) {
-      const count = await Dashboard.countDocuments({ userId });
+      const count = await Dashboard.countDocuments({ userId, isDemo: { $ne: true } });
       if (count >= 2) {
         return NextResponse.json({ 
-          error: 'Free tier limit reached (Max 2 Dashboards). Please upgrade.' 
+          error: 'Free tier limit reached (Max 2 Custom Dashboards). Please upgrade.' 
         }, { status: 400 });
       }
     }
@@ -75,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(dashboard, { status: 201 });
   } catch (error) {
+    console.error('Create dashboard error:', error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }

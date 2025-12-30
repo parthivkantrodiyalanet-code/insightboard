@@ -1,10 +1,14 @@
 import connectToDatabase from "@/lib/db";
 import User from "@/models/User";
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { getCurrentUser } from '@/lib/auth-helper';
+import { stripe } from '@/lib/api/stripe';
+import { getCurrentUser } from '@/lib/api/auth-helper';
 
-export async function POST(req: Request) {
+/**
+ * POST /api/stripe/checkout
+ * Creates a Stripe Checkout Session for subscription
+ */
+export async function POST() {
   try {
     const user = await getCurrentUser();
 
@@ -43,8 +47,9 @@ export async function POST(req: Request) {
         } else {
             throw new Error('Demo Mode');
         }
-    } catch (err: any) {
-        console.log('[Stripe] Checkout creation failed or in Demo Mode:', err.message);
+    } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown Error';
+        console.log('[Stripe] Checkout creation failed or in Demo Mode:', errorMsg);
         // FALLBACK FOR DEMO: Simulate a successful checkout redirect
         // In a real app, this would be the Stripe Hosted Page.
         // For this demo, we redirect straight to success after a small delay simulation?

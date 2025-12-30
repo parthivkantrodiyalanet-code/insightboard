@@ -6,6 +6,10 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
+/**
+ * POST /api/auth/login
+ * Authenticates a user and returns a JWT token
+ */
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
@@ -46,11 +50,13 @@ export async function POST(request: Request) {
       { expiresIn: '1d' }
     );
 
-    const { password, ...userWithoutPassword } = user.toObject();
+    // Remove password from response
+    const userObj = user.toObject();
+    delete userObj.password;
 
     return NextResponse.json({
       token,
-      user: userWithoutPassword
+      user: userObj
     });
   } catch (error) {
     console.error('Login error:', error);

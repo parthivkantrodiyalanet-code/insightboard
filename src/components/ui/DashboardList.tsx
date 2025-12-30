@@ -1,14 +1,29 @@
-'use client';
-
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, MoreVertical, Edit2, Trash2, Layout } from 'lucide-react';
+import { PlusCircle, Trash2, Layout } from 'lucide-react';
 
-export default function DashboardList({ dashboards, onDelete }: { dashboards: any[], onDelete: (id: string) => void }) {
+interface DashboardListItem {
+  _id: string;
+  name: string;
+  isDemo?: boolean;
+  datasetId?: { name: string };
+  updatedAt: string;
+}
+
+export default function DashboardList({ 
+  dashboards, 
+  onDelete 
+}: { 
+  dashboards: DashboardListItem[], 
+  onDelete: (id: string) => void 
+}) {
   const router = useRouter();
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string, isDemo: boolean) => {
     e.stopPropagation();
+    if (isDemo) {
+      alert("Demo dashboards cannot be deleted.");
+      return;
+    }
     if(confirm('Are you sure you want to delete this dashboard?')) {
         onDelete(id);
     }
@@ -38,10 +53,15 @@ export default function DashboardList({ dashboards, onDelete }: { dashboards: an
             <div className="p-3 bg-indigo-500/10 rounded-lg text-indigo-400">
               <Layout size={24} />
             </div>
+            {dash.isDemo && (
+              <span className="px-2 py-1 bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-wider rounded border border-green-500/30">
+                Demo
+              </span>
+            )}
             <div className="dropdown relative group-hover:block">
               {/* Simple action menu triggers could go here */}
-               <button 
-                  onClick={(e) => handleDelete(e, dash._id)}
+                <button 
+                  onClick={(e) => handleDelete(e, dash._id, !!dash.isDemo)}
                   className="p-2 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
                   title="Delete Dashboard"
                 >

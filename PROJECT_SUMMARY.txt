@@ -15,7 +15,8 @@ InsightBoard is a comprehensive web application that enables users to:
 - Upload Excel files and convert them into interactive datasets
 - Create multiple dashboards to visualize and analyze data
 - Generate beautiful, customizable charts and widgets
-- Manage datasets and dashboards through an intuitive interface
+- AI-Powered Insights: Automatic trend analysis and recommendations using Gemini AI
+- Seamless Onboarding: Pre-seeded demo datasets and "Instant Preview" demo mode
 - Secure authentication system with JWT-based access control
 
 Key Tagline: "Turn Data into Decisions"
@@ -43,6 +44,7 @@ BACKEND:
 - Authentication: JWT (jsonwebtoken 9.0.3)
 - Password Hashing: bcryptjs 3.0.3
 - File Processing: XLSX 0.18.5 (Excel file parsing)
+- AI Engine: Google Gemini 1.5 Flash (via Gemini API)
 
 DEVELOPMENT TOOLS:
 - Linting: ESLint 9.0
@@ -84,6 +86,8 @@ src/
 │   │   │   └── [id]/route.ts          : Get specific dashboard
 │   │   ├── datasets/
 │   │   │   └── route.ts               : Upload & fetch datasets
+│   │   ├── insights/
+│   │   │   └── route.ts               : AI Insights generation endpoint
 │   │   ├── users/
 │   │   │   └── route.ts               : User management
 │   │   └── widgets/
@@ -96,10 +100,14 @@ src/
 │       └── profile/page.tsx    : User profile page
 ├── components/                 : Reusable React components
 │   ├── DashboardChart.tsx      : Chart rendering component (supports Bar, Line, Area)
-│   ├── DashboardList.tsx       : Dashboard listing component
-│   └── KPICard.tsx             : Key Performance Indicator card
+│   ├── DashboardList.tsx       : Dashboard listing component (supports Demo badges)
+│   ├── KPICard.tsx             : Key Performance Indicator card
+│   └── AIInsights.tsx          : AI-powered analysis display component
 ├── lib/
-│   └── db.ts                   : MongoDB connection utility
+│   ├── db.ts                   : MongoDB connection utility
+│   ├── gemini.ts               : Gemini API integration wrapper
+│   ├── data-analyzer.ts        : Dataset summarization logic for AI
+│   └── seeder.ts               : Demo data generator for onboarding
 └── models/                     : Mongoose database schemas
     ├── User.ts                 : User schema (name, email, password, role)
     ├── Dashboard.ts            : Dashboard schema (userId, datasetId, name)
@@ -125,6 +133,7 @@ DATASET MODEL:
 - userId: ObjectId (Reference to User) - Owner of dataset
 - name: String (Required) - Dataset name/filename
 - data: Array (Required) - Array of data objects (Excel rows)
+- insights: Object (Optional) - Cached AI analysis results
 - createdAt: Timestamp
 - updatedAt: Timestamp
 
@@ -134,6 +143,7 @@ DASHBOARD MODEL:
 - datasetId: ObjectId (Reference to Dataset) - Linked dataset (Optional)
 - name: String (Required) - Dashboard name
 - description: String (Optional) - Dashboard description
+- isDemo: Boolean (Default: false) - Flag for pre-seeded or temporary dashboards
 - createdAt: Timestamp
 - updatedAt: Timestamp
 
@@ -301,6 +311,21 @@ GET /api/charts
   * Populate dataset references
   * Return chart list with data
 
+INSIGHTS ENDPOINT:
+
+POST /api/insights
+- Purpose: Generate AI insights for a dataset
+- Auth Required: Yes
+- Request Body: { datasetId: ObjectId }
+- Response: { insights: { keyInsights: [], risks: [], recommendations: [] } }
+- Logic:
+  * Fetch dataset by ID
+  * Check for cached insights
+  * If no cache, generate data summary
+  * Call Gemini API with summary prompt
+  * Cache result in Dataset collection
+  * Return insights object
+
 ================================================================================
 6. AUTHENTICATION & AUTHORIZATION FLOW
 ================================================================================
@@ -429,6 +454,15 @@ DASHBOARD LIST COMPONENT (DashboardList.tsx):
 - Quick action buttons (Edit, Delete, View)
 - Create new dashboard card
 - Empty state message if no dashboards
+- Supports 'Demo' badges for pre-seeded systems
+- Prevents deletion of core demo assets
+
+AI INSIGHTS COMPONENT (AIInsights.tsx):
+- Displays three columns of analysis: Trends, Risks, Actions
+- Loading states with animated spinners
+- Disclaimer and information tooltips
+- Beta/AI generation branding
+- Retry/regenerate capability
 
 KPI CARD COMPONENT (KPICard.tsx):
 - Single metric display
@@ -932,6 +966,7 @@ Solution:
    - Scheduled report generation
    - Real-time data updates
    - Collaborative features
+   - Predictive analytics (Future AI expansion)
 
 4. UI/UX IMPROVEMENTS
    - Theme customization
@@ -957,9 +992,9 @@ Solution:
 END OF PROJECT SUMMARY
 ================================================================================
 
-Document Generated: December 26, 2025
-Project Version: 0.1.0
-Status: Active Development
+Document Generated: December 29, 2025
+Project Version: 0.1.1
+Status: Active Development (AI Insights & Onboarding Live)
 
 For questions or clarifications, refer to the codebase and inline comments.
 ================================================================================

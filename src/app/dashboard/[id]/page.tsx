@@ -1,412 +1,760 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { 
-  Plus, Settings, FileSpreadsheet, Save, Trash2, Edit2, BarChart2, Check, X
-} from 'lucide-react';
-import DashboardChart from '@/components/DashboardChart';
-import KPICard from '@/components/KPICard';
-import DownloadPDFButton from "@/components/DownloadPDFButton";
-import * as XLSX from 'xlsx';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Plus,
+  FileSpreadsheet,
+  Trash2,
+  Edit2,
+  Check,
+  LayoutDashboard,
+  Sparkles,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { DashboardChart, KPICard } from "@/components/charts";
+import { DownloadPDFButton, AIInsights, Spinner } from "@/components/ui";
+import * as XLSX from "xlsx";
 
+interface Dataset {
+  _id: string;
+  name: string;
+  data: Record<string, unknown>[];
+  insights?: {
+    keyInsights: string[];
+    risks: string[];
+    recommendations: string[];
+    generatedAt: string;
+  };
+}
+
+interface Widget {
+  _id: string;
+  title: string;
+  type: string;
+  config: {
+    xAxisKey?: string;
+    yAxisKey?: string;
+    column?: string;
+    operation?: "sum" | "avg" | "count";
+    color: string;
+  };
+}
+
+interface Dashboard {
+  _id: string;
+  name: string;
+  isDemo?: boolean;
+  datasetId?: Dataset;
+}
+
+interface DashboardResponse {
+  dashboard: Dashboard;
+  widgets: Widget[];
+}
+
+/**
+ * DashboardBuilder Component
+ * Main page for building and viewing individual dashboards
+ * Handles data fetching, widget management, file uploads, and AI insights
+ */
 export default function DashboardBuilder() {
   const params = useParams();
   const router = useRouter();
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [widgets, setWidgets] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any[]>([]);
-  const [columns, setColumns] = useState<string[]>([]);
-  
-  // Edit States
+  const queryClient = useQueryClient();
+
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  
-  // Widget Modal
+  const [newTitle, setNewTitle] = useState("");
   const [showWidgetModal, setShowWidgetModal] = useState(false);
-  const [widgetType, setWidgetType] = useState('bar'); // bar, line, area, kpi
-  const [widgetConfig, setWidgetConfig] = useState<any>({ 
-    title: '', 
-    xAxis: '', 
-    yAxis: '', 
-    color: '#3b82f6',
-    operation: 'sum' // for KPI
+  const [widgetType, setWidgetType] = useState("bar");
+  const [widgetConfig, setWidgetConfig] = useState<{
+    title: string;
+    xAxis: string;
+    yAxis: string;
+    color: string;
+    operation: "sum" | "avg" | "count";
+  }>({
+    title: "",
+    xAxis: "",
+    yAxis: "",
+    color: "#3b82f6",
+    operation: "sum",
+  });
+
+  const [data, setData] = useState<Record<string, unknown>[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);
+
+  // Fetch dashboard data
+  const {
+    data: dashboardData,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["dashboard", params.id],
+    queryFn: async () => {
+      if (params.id === "demo") return getDemoData();
+      const res = await fetch(`/api/dashboards/${params.id}`);
+      if (!res.ok) {
+        toast.error("Failed to load dashboard");
+        throw new Error("Failed to load dashboard");
+      }
+      return res.json();
+    },
   });
 
   useEffect(() => {
-    fetchDashboardDetails();
-  }, []);
-
-  const fetchDashboardDetails = async () => {
-    try {
-      const res = await fetch(`/api/dashboards/${params.id}`);
-      if (!res.ok) throw new Error('Failed to load');
-      const json = await res.json();
-      setDashboard(json.dashboard);
-      setNewTitle(json.dashboard.name);
-      setWidgets(json.widgets);
-
-      if (json.dashboard.datasetId) {
-        // In a real app we'd fetch dataset content via API, 
-        // but for now we assume dataset content is embedded or separate.
-        // Let's implement a quick fetch for dataset data since our model stores it.
-        // Or if the dataset is large, we'd paginate. 
-        // For this demo, let's assume we can fetch it.
-        // Actually, our API needs to return it.
-        // Let's assume the previous step uploaded it. 
-        // Note: The Dashboard model links to Dataset, Dataset has 'data'.
-        // We need to fetch that 'data' to power the widgets locally.
-        
-        // Let's quickly add a fetch for the dataset data if not included
-        // The /api/dashboards/[id] includes populate('datasetId'), but does it include the heavy 'data' field?
-        // Default populate might include it if we didn't exclude it.
-        if (json.dashboard.datasetId.data) {
-           setData(json.dashboard.datasetId.data);
-           if (json.dashboard.datasetId.data.length > 0) {
-             setColumns(Object.keys(json.dashboard.datasetId.data[0]));
-           }
+    if (dashboardData) {
+      const db = dashboardData.dashboard || dashboardData;
+      setNewTitle(db.name || "");
+      const dataset = db.datasetId;
+      if (dataset?.data) {
+        setData(dataset.data);
+        if (dataset.data.length > 0) {
+          setColumns(Object.keys(dataset.data[0]));
         }
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
     }
+  }, [dashboardData]);
+
+  // Mutation for updating dashboard title
+  const updateTitleMutation = useMutation({
+    mutationFn: async (title: string) => {
+      if (params.id === "demo") return { name: title };
+      const res = await fetch(`/api/dashboards/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: title }),
+      });
+      return res.json();
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(
+        ["dashboard", params.id],
+        (old: DashboardResponse | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            dashboard: { ...old.dashboard, name: updated.name },
+          };
+        }
+      );
+      setIsEditingTitle(false);
+      toast.success("Title updated");
+    },
+    onError: () => toast.error("Failed to update title"),
+  });
+
+  // Mutation for generating AI insights
+  const insightsMutation = useMutation({
+    mutationFn: async (datasetId: string) => {
+      const res = await fetch("/api/insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ datasetId }),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", params.id] });
+      toast.success("AI Insights generated");
+    },
+    onError: () => toast.error("Failed to generate insights"),
+  });
+
+  // Mutation for adding new widgets
+  const widgetMutation = useMutation({
+    mutationFn: async (newWidget: {
+      dashboardId: string;
+      title: string;
+      type: string;
+      config: Record<string, unknown>;
+    }) => {
+      const res = await fetch("/api/widgets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newWidget),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", params.id] });
+      setShowWidgetModal(false);
+      toast.success("Widget added");
+    },
+    onError: () => toast.error("Failed to add widget"),
+  });
+
+  // Mutation for deleting widgets
+  const deleteWidgetMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await fetch(`/api/widgets?id=${id}`, { method: "DELETE" });
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", params.id] });
+      toast.success("Widget removed");
+    },
+    onError: () => toast.error("Failed to delete widget"),
+  });
+
+  const dashboard =
+    dashboardData?.dashboard ||
+    (dashboardData?._id === "demo" ? dashboardData : null);
+  const widgets =
+    dashboardData?.widgets ||
+    (dashboardData?._id === "demo" ? dashboardData.widgets : []);
+  const insights = dashboard?.datasetId?.insights || null;
+
+  const handleUpdateTitle = () => updateTitleMutation.mutate(newTitle);
+
+  const loadAIInsights = () => {
+    if (params.id === "demo") {
+      toast.error("Demo mode insights are static");
+      return;
+    }
+    if (dashboard?.datasetId?._id)
+      insightsMutation.mutate(dashboard.datasetId._id);
   };
 
-  const handleUpdateTitle = async () => {
-    try {
-      await fetch(`/api/dashboards/${params.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTitle })
-      });
-      setIsEditingTitle(false);
-      setDashboard({ ...dashboard, name: newTitle });
-    } catch (e) {
-      console.error(e);
-    }
-  };
-  
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (params.id === "demo") {
+      toast.error("Upload disabled in demo");
+      return;
+    }
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    const promise = new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async (evt) => {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const jsonData = XLSX.utils.sheet_to_json(ws);
-        
-        // Upload Dataset API
-        const res = await fetch('/api/datasets', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name: file.name, data: jsonData })
-        });
-        
-        if (res.ok) {
-            const newDataset = await res.json();
-            // Link to Dashboard
-             await fetch(`/api/dashboards/${params.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ datasetId: newDataset._id })
-            });
-            setData(jsonData);
-            setColumns(Object.keys(jsonData[0] as object));
-            setDashboard({ ...dashboard, datasetId: newDataset });
+        try {
+          const bstr = evt.target?.result;
+          const wb = XLSX.read(bstr, { type: "binary" });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(ws);
+
+          const res = await fetch("/api/datasets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: file.name, data: jsonData }),
+          });
+
+          if (!res.ok) throw new Error("Upload failed");
+
+          const ds = await res.json();
+          await fetch(`/api/dashboards/${params.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ datasetId: ds._id }),
+          });
+
+          queryClient.invalidateQueries({ queryKey: ["dashboard", params.id] });
+          resolve(true);
+        } catch (err) {
+          reject(err);
         }
       };
+      reader.onerror = () => reject(new Error("File reading error"));
       reader.readAsBinaryString(file);
-    }
+    });
+
+    toast.promise(promise, {
+      loading: "Uploading and parsing file...",
+      success: "Data imported successfully!",
+      error: "Failed to import data.",
+    });
   };
 
-  const addWidget = async () => {
-    // Construct widget object
-    let finalConfig: any = {};
-    
-    if (widgetType === 'kpi') {
-      finalConfig = {
-        column: widgetConfig.yAxis, // Reuse yAxis state for column selection
+  const addWidget = () => {
+    if (params.id === "demo")
+      return toast.error("Adding widgets disabled in demo.");
+    let config: Record<string, unknown> = {};
+    if (widgetType === "kpi") {
+      config = {
+        column: widgetConfig.yAxis,
         operation: widgetConfig.operation,
-        color: widgetConfig.color
+        color: widgetConfig.color,
       };
-      
-      // Calculate KPI value for immediate display
-      let val = 0;
-      const col = widgetConfig.yAxis;
-      const nums = data.map(r => Number(r[col]) || 0);
-      if (widgetConfig.operation === 'sum') val = nums.reduce((a, b) => a + b, 0);
-      else if (widgetConfig.operation === 'avg') val = nums.reduce((a, b) => a + b, 0) / nums.length;
-      else if (widgetConfig.operation === 'count') val = nums.length;
-      else if (widgetConfig.operation === 'max') val = Math.max(...nums);
-      else if (widgetConfig.operation === 'min') val = Math.min(...nums);
-      
-      finalConfig.value = val.toLocaleString(); // Store snapshot or calc dynamically
     } else {
-      finalConfig = {
+      config = {
         xAxisKey: widgetConfig.xAxis,
         yAxisKey: widgetConfig.yAxis,
         color: widgetConfig.color,
-        title: widgetConfig.title
+        title: widgetConfig.title,
       };
     }
-    
-    try {
-        const res = await fetch('/api/widgets', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                dashboardId: dashboard._id,
-                title: widgetConfig.title || 'Untitled Widget',
-                type: widgetType,
-                config: finalConfig
-            })
-        });
-        
-        if(res.ok) {
-            const newWidget = await res.json();
-            setWidgets([...widgets, newWidget]);
-            setShowWidgetModal(false);
-            // Reset config
-            setWidgetConfig({ title: '', xAxis: '', yAxis: '', color: '#3b82f6', operation: 'sum' });
-        }
-    } catch(e) { console.error(e); }
+    widgetMutation.mutate({
+      dashboardId: (dashboard as Dashboard)._id,
+      title: widgetConfig.title || "Untitled",
+      type: widgetType,
+      config,
+    });
   };
 
-  const deleteWidget = async (id: string) => {
-      if(!confirm('Delete this widget?')) return;
-      await fetch(`/api/widgets?id=${id}`, { method: 'DELETE' });
-      setWidgets(widgets.filter(w => w._id !== id));
+  const deleteWidget = (id: string) => {
+    if (params.id === "demo") {
+      queryClient.setQueryData(
+        ["dashboard", params.id],
+        (old: DashboardResponse | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            widgets: old.widgets.filter((w: Widget) => w._id !== id),
+          };
+        }
+      );
+      return;
+    }
+    if (confirm("Delete widget?")) deleteWidgetMutation.mutate(id);
   };
-  
-  if (loading) return <div className="p-8 text-center">Loading Dashboard...</div>;
-  if (!dashboard) return <div className="p-8 text-center">Dashboard not found</div>;
+
+  if (isLoading) return <Spinner size="lg" className="mt-20" />;
+  if (isError || !dashboard)
+    return (
+      <div className="p-20 text-center">
+        <p className="text-red-400 mb-4">
+          Dashboard not found or failed to load
+        </p>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="btn-primary"
+        >
+          Go Back
+        </button>
+      </div>
+    );
 
   return (
-    <div className="space-y-8 pb-20">
-      {/* Header */}
+    <div className="space-y-8 pb-20 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-           {isEditingTitle ? (
-             <div className="flex items-center gap-2">
-               <input 
-                 className="bg-slate-800 border border-slate-700 rounded px-3 py-1 text-2xl font-bold text-white focus:outline-none focus:border-blue-500"
-                 value={newTitle}
-                 onChange={(e) => setNewTitle(e.target.value)}
-                 autoFocus
-               />
-               <button onClick={handleUpdateTitle} className="p-2 bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30">
-                 <Check size={20} />
-               </button>
-             </div>
-           ) : (
-             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 flex items-center gap-3 group">
-               {dashboard.name}
-               <button onClick={() => setIsEditingTitle(true)} className="text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                 <Edit2 size={20} />
-               </button>
-             </h1>
-           )}
-           <p className="text-slate-400 mt-1 flex items-center gap-2">
-             <FileSpreadsheet size={16} /> 
-             {dashboard.datasetId ? dashboard.datasetId.name : 'No file linked'}
-             
-             <label className="text-blue-400 text-xs ml-2 cursor-pointer hover:underline">
-               {dashboard.datasetId ? '(Change File)' : '(Upload File)'}
-               <input type="file" onChange={handleFileUpload} className="hidden" accept=".xlsx,.csv" />
-             </label>
-           </p>
+          {isEditingTitle ? (
+            <div className="flex items-center gap-2">
+              <input
+                className="bg-slate-800 border border-slate-700 rounded px-3 py-1 text-2xl font-bold text-white focus:outline-none focus:border-blue-500"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                autoFocus
+              />
+              <button
+                onClick={handleUpdateTitle}
+                className="p-2 bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30"
+              >
+                <Check size={20} />
+              </button>
+            </div>
+          ) : (
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 flex items-center gap-3 group">
+              {dashboard.name}
+              <button
+                onClick={() => setIsEditingTitle(true)}
+                className="text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Edit2 size={20} />
+              </button>
+            </h1>
+          )}
+          <p className="text-slate-400 mt-1 flex items-center gap-2">
+            <FileSpreadsheet size={16} />
+            {dashboard.datasetId ? dashboard.datasetId.name : "No file linked"}
+            <label className="text-blue-400 text-xs ml-2 cursor-pointer hover:underline">
+              {dashboard.datasetId ? "(Change)" : "(Upload)"}
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+                accept=".xlsx,.csv"
+              />
+            </label>
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
-            <DownloadPDFButton targetId="dashboard-content" fileName={dashboard.name} />
-            <button 
-              disabled={!dashboard.datasetId}
-              onClick={() => setShowWidgetModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          <div className="flex bg-slate-800 p-1 rounded-xl mr-2">
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "dashboard"
+                  ? "bg-slate-700 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
             >
-              <Plus size={20} /> Add Widget
+              <LayoutDashboard size={16} /> Dashboard
             </button>
+            <button
+              onClick={() => setActiveTab("insights")}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "insights"
+                  ? "bg-slate-700 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Sparkles size={16} /> AI Insights
+            </button>
+          </div>
+          <DownloadPDFButton targetId="full-report" fileName={dashboard.name} />
+          <button
+            disabled={!dashboard.datasetId}
+            onClick={() => setShowWidgetModal(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
+          >
+            <Plus size={20} /> Add Widget
+          </button>
         </div>
       </div>
 
-      {/* Widgets Display */}
-      <div id="dashboard-content" className="p-4 -m-4 bg-slate-950"> {/* Wrapper for PDF capture */}
-      {widgets.length === 0 ? (
-        <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl">
-          <p className="text-slate-500">No widgets yet. Add a Chart or KPI to get started.</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-           {/* KPIs Section */}
-           {widgets.some(w => w.type === 'kpi') && (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {widgets.filter(w => w.type === 'kpi').map((widget) => (
-                    <div key={widget._id} className="relative group">
-                      <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" data-html2canvas-ignore>
-                         <button onClick={() => deleteWidget(widget._id)} className="p-2 bg-slate-900/80 text-red-400 rounded-lg hover:bg-red-500/20">
-                             <Trash2 size={16} />
-                         </button>
-                      </div>
-                      <KPICard 
-                          title={widget.title} 
-                          value={(() => {
-                                if(!data.length) return 0;
-                                const col = widget.config.column;
-                                const op = widget.config.operation;
-                                const nums = data.map(r => Number(r[col]) || 0);
-                                if(op === 'sum') return nums.reduce((a,b)=>a+b,0).toLocaleString();
-                                if(op === 'avg') return (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2);
-                                if(op === 'count') return nums.length;
-                               if(op === 'max') return Math.max(...nums);
-                               if(op === 'min') return Math.min(...nums);
-                                return 0;
-                          })()} 
-                          color={widget.config.color} 
-                      />
-                    </div>
-                ))}
-             </div>
-           )}
+      {/* Tab Content */}
+      <div className="relative">
+        {/* Visible Component based on Tab */}
+        {activeTab === "insights" ? (
+          <AIInsights
+            insights={insights}
+            loading={insightsMutation.isPending}
+            onRetry={loadAIInsights}
+          />
+        ) : (
+          <div id="dashboard-content" className="space-y-8">
+            <DashboardWidgets
+              widgets={widgets}
+              data={data}
+              deleteWidget={deleteWidget}
+            />
+          </div>
+        )}
 
-           {/* Charts Section */}
-           {widgets.some(w => w.type !== 'kpi') && (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                 {widgets.filter(w => w.type !== 'kpi').map((widget) => (
-                     <div key={widget._id} className="relative group">
-                         <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" data-html2canvas-ignore>
-                             <button onClick={() => deleteWidget(widget._id)} className="p-2 bg-slate-900/80 text-red-400 rounded-lg hover:bg-red-500/20">
-                                 <Trash2 size={16} />
-                             </button>
-                         </div>
-                         <DashboardChart chartData={{
-                             type: widget.type,
-                             datasetId: { data: data },
-                             xAxisKey: widget.config.xAxisKey,
-                             yAxisKey: widget.config.yAxisKey,
-                             color: widget.config.color,
-                             title: widget.title
-                         }} />
-                     </div>
-                 ))}
-             </div>
-           )}
+        {/* Hidden Report Layer for PDF (Contains both) */}
+        <div
+          id="full-report"
+          className="fixed -left-[9999px] top-0 w-[1200px] bg-slate-950 p-10 space-y-12"
+          aria-hidden="true"
+        >
+          <div className="border-b border-slate-800 pb-6 mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              {dashboard.name}
+            </h1>
+            <p className="text-slate-400">
+              Generated on {new Date().toLocaleDateString()} • InsightBoard
+              Analytics
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">
+              <LayoutDashboard /> Visual Dashboard
+            </h2>
+            <DashboardWidgets
+              widgets={widgets}
+              data={data}
+              deleteWidget={() => {}}
+            />
+          </div>
+
+          {insights && (
+            <div className="pt-12 border-t border-slate-800">
+              <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
+                <Sparkles /> AI Data Insights
+              </h2>
+              <AIInsights
+                insights={insights}
+                loading={false}
+                onRetry={() => {}}
+              />
+            </div>
+          )}
         </div>
-      )}
       </div>
 
-      {/* Add Widget Modal */}
       {showWidgetModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-lg shadow-2xl">
-             <h2 className="text-xl font-bold text-white mb-4">Add Widget</h2>
-             
-             <div className="space-y-4">
-               <div>
-                  <label className="text-sm text-slate-400 mb-1 block">Widget Type</label>
-                  <div className="flex items-center gap-2 p-1 bg-slate-800 rounded-lg">
-                      {['bar', 'line', 'area', 'kpi'].map(t => (
-                          <button 
-                            key={t}
-                            onClick={() => setWidgetType(t)}
-                            className={`flex-1 py-1 px-3 text-sm font-medium rounded-md uppercase transition-colors ${widgetType === t ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                          >
-                              {t}
-                          </button>
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in duration-300">
+            <h2 className="text-xl font-bold text-white mb-4">Add Widget</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-slate-400 mb-1 block">
+                  Type
+                </label>
+                <div className="flex gap-2 p-1 bg-slate-800 rounded-lg">
+                  {["bar", "line", "area", "kpi"].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setWidgetType(t)}
+                      className={`flex-1 py-1 rounded-md uppercase text-xs font-bold ${
+                        widgetType === t
+                          ? "bg-blue-600 text-white"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-slate-400 mb-1 block">
+                  Title
+                </label>
+                <input
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  value={widgetConfig.title}
+                  onChange={(e) =>
+                    setWidgetConfig({ ...widgetConfig, title: e.target.value })
+                  }
+                  placeholder="Widget name..."
+                />
+              </div>
+              {widgetType === "kpi" ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-slate-400 mb-1 block">
+                      Column
+                    </label>
+                    <select
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none"
+                      value={widgetConfig.yAxis}
+                      onChange={(e) =>
+                        setWidgetConfig({
+                          ...widgetConfig,
+                          yAxis: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Select</option>
+                      {columns.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
                       ))}
+                    </select>
                   </div>
-               </div>
-
-               <div>
-                 <label className="text-sm text-slate-400 mb-1 block">Title</label>
-                 <input 
-                   className="input-field" 
-                   value={widgetConfig.title}
-                   onChange={e => setWidgetConfig({...widgetConfig, title: e.target.value})}
-                   placeholder="Widget Title"
-                 />
-               </div>
-
-               {widgetType === 'kpi' ? (
-                   <div className="grid grid-cols-2 gap-4">
-                        <div>
-                         <label className="text-sm text-slate-400 mb-1 block">Column</label>
-                         <select 
-                           className="input-field appearance-none"
-                           value={widgetConfig.yAxis} 
-                           onChange={e => setWidgetConfig({...widgetConfig, yAxis: e.target.value})}
-                         >
-                            <option value="">Select Column</option>
-                            {columns.map(c => <option key={c} value={c}>{c}</option>)}
-                         </select>
-                       </div>
-                       <div>
-                         <label className="text-sm text-slate-400 mb-1 block">Operation</label>
-                         <select 
-                           className="input-field appearance-none"
-                           value={widgetConfig.operation} 
-                           onChange={e => setWidgetConfig({...widgetConfig, operation: e.target.value})}
-                         >
-                            <option value="sum">Sum</option>
-                            <option value="avg">Average</option>
-                            <option value="count">Count</option>
-                         </select>
-                       </div>
-                   </div>
-               ) : (
-                   <div className="grid grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-sm text-slate-400 mb-1 block">X Axis</label>
-                         <select 
-                           className="input-field appearance-none"
-                           value={widgetConfig.xAxis} 
-                           onChange={e => setWidgetConfig({...widgetConfig, xAxis: e.target.value})}
-                         >
-                            <option value="">Select Axis</option>
-                            {columns.map(c => <option key={c} value={c}>{c}</option>)}
-                         </select>
-                       </div>
-                       <div>
-                         <label className="text-sm text-slate-400 mb-1 block">Y Axis</label>
-                         <select 
-                           className="input-field appearance-none"
-                           value={widgetConfig.yAxis} 
-                           onChange={e => setWidgetConfig({...widgetConfig, yAxis: e.target.value})}
-                         >
-                            <option value="">Select Value</option>
-                            {columns.map(c => <option key={c} value={c}>{c}</option>)}
-                         </select>
-                       </div>
-                   </div>
-               )}
-               
-               <div>
-                  <label className="text-sm text-slate-400 mb-1 block">Color Theme</label>
-                   <div className="flex gap-2">
-                      {['#3b82f6', '#8b5cf6', '#f43f5e', '#10b981', '#f59e0b'].map(c => (
-                          <button 
-                            key={c}
-                            onClick={() => setWidgetConfig({...widgetConfig, color: c})}
-                            className={`w-6 h-6 rounded-full border-2 ${widgetConfig.color === c ? 'border-white' : 'border-slate-800'}`}
-                            style={{backgroundColor: c}}
-                          />
+                  <div>
+                    <label className="text-sm text-slate-400 mb-1 block">
+                      Op
+                    </label>
+                    <select
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none"
+                      value={widgetConfig.operation}
+                      onChange={(e) =>
+                        setWidgetConfig({
+                          ...widgetConfig,
+                          operation: e.target.value as "sum" | "avg" | "count",
+                        })
+                      }
+                    >
+                      <option value="sum">Sum</option>
+                      <option value="avg">Avg</option>
+                      <option value="count">Count</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-slate-400 mb-1 block">
+                      X Axis
+                    </label>
+                    <select
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none"
+                      value={widgetConfig.xAxis}
+                      onChange={(e) =>
+                        setWidgetConfig({
+                          ...widgetConfig,
+                          xAxis: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Select</option>
+                      {columns.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
                       ))}
-                   </div>
-               </div>
-
-             </div>
-
-             <div className="flex justify-end gap-3 mt-6">
-                 <button onClick={() => setShowWidgetModal(false)} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-                 <button onClick={addWidget} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white">Save Widget</button>
-             </div>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-400 mb-1 block">
+                      Y Axis
+                    </label>
+                    <select
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none"
+                      value={widgetConfig.yAxis}
+                      onChange={(e) =>
+                        setWidgetConfig({
+                          ...widgetConfig,
+                          yAxis: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Select</option>
+                      {columns.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowWidgetModal(false)}
+                className="px-4 py-2 text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addWidget}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * DashboardWidgets Component
+ * Renders the grid of KPI cards and charts
+ */
+function DashboardWidgets({
+  widgets,
+  data,
+  deleteWidget,
+}: {
+  widgets: Widget[];
+  data: Record<string, unknown>[];
+  deleteWidget: (id: string) => void;
+}) {
+  if (widgets.length === 0) {
+    return (
+      <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-2xl text-slate-500">
+        No widgets yet. Add some to see your data!
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {widgets.some((w: Widget) => w.type === "kpi") && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {widgets
+            .filter((w: Widget) => w.type === "kpi")
+            .map((widget: Widget) => (
+              <div key={widget._id} className="relative group">
+                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => deleteWidget(widget._id)}
+                    className="p-2 bg-slate-900/80 text-red-400 rounded-lg hover:bg-red-500/20"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                <KPICard
+                  title={widget.title}
+                  value={(() => {
+                    if (!data.length) return 0;
+                    const col = widget.config.column as string;
+                    if (!col) return 0;
+                    const op = widget.config.operation;
+                    const nums = data.map((r) => Number(r[col]) || 0);
+                    if (op === "sum")
+                      return nums.reduce((a, b) => a + b, 0).toLocaleString();
+                    if (op === "avg")
+                      return (
+                        nums.reduce((a, b) => a + b, 0) / nums.length
+                      ).toFixed(2);
+                    if (op === "count") return nums.length;
+                    return 0;
+                  })()}
+                  color={widget.config.color as string}
+                />
+              </div>
+            ))}
+        </div>
+      )}
+
+      {widgets.some((w: Widget) => w.type !== "kpi") && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {widgets
+            .filter((w: Widget) => w.type !== "kpi")
+            .map((widget: Widget) => (
+              <div key={widget._id} className="relative group">
+                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => deleteWidget(widget._id)}
+                    className="p-2 bg-slate-900/80 text-red-400 rounded-lg hover:bg-red-500/20"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                <DashboardChart
+                  chartData={{
+                    type: widget.type as "bar" | "line" | "area",
+                    datasetId: { data: data },
+                    xAxisKey: (widget.config.xAxisKey as string) || "",
+                    yAxisKey: (widget.config.yAxisKey as string) || "",
+                    color: widget.config.color as string,
+                    title: widget.title,
+                  }}
+                />
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Demo Data Generator
+ * Provides sample data for the demo dashboard view
+ */
+function getDemoData() {
+  return {
+    _id: "demo",
+    name: "Instant Preview (Demo)",
+    isDemo: true,
+    datasetId: {
+      _id: "demo-ds",
+      name: "Sample Data",
+      data: [
+        { Month: "Jan", Sales: 4000, Orders: 240, Revenue: 12000 },
+        { Month: "Feb", Sales: 3000, Orders: 221, Revenue: 9000 },
+        { Month: "Mar", Sales: 5000, Orders: 229, Revenue: 15000 },
+        { Month: "Apr", Sales: 4500, Orders: 250, Revenue: 13500 },
+        { Month: "May", Sales: 6000, Orders: 310, Revenue: 18000 },
+        { Month: "Jun", Sales: 5500, Orders: 280, Revenue: 16500 },
+      ],
+      insights: {
+        keyInsights: [
+          "Sales peaked in May reaching 6,000 units.",
+          "Revenue shows a steady upward trend despite a dip in February.",
+          "Orders are highly correlated with marketing spend in Q2.",
+        ],
+        risks: [
+          "February saw a 25% drop in sales volume.",
+          "Order fulfillment speed slowed down in May due to high volume.",
+        ],
+        recommendations: [
+          "Increase inventory for peak months like May and March.",
+          "Investigate the cause of the February slump to prevent future dips.",
+          "Automate order processing to handle higher volumes in Q3.",
+        ],
+      },
+    },
+    widgets: [
+      {
+        _id: "w1",
+        title: "Sales Trend",
+        type: "bar",
+        config: { xAxisKey: "Month", yAxisKey: "Sales", color: "#3b82f6" },
+      },
+    ],
+  };
 }

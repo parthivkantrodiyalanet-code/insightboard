@@ -13,7 +13,7 @@ export async function getCurrentUser() {
     const secret = new TextEncoder().encode(JWT_SECRET)
     const { payload } = await jwtVerify(token, secret)
     return payload
-  } catch (error) {
+  } catch {
     return null
   }
 }

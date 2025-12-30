@@ -1,10 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Shield, Calendar, Loader2 } from 'lucide-react';
+import { Mail, Shield, Calendar, Loader2 } from 'lucide-react';
+
+interface UserProfile {
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  trialEndsAt: string;
+  isPaid: boolean;
+}
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

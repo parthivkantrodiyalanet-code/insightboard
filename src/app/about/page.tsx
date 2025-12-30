@@ -1,4 +1,4 @@
-import MarketingNavbar from '@/components/MarketingNavbar';
+import MarketingNavbar from '@/components/layout/MarketingNavbar';
 import { Users, CheckCircle, TrendingUp } from 'lucide-react';
 
 export default function AboutPage() {
@@ -24,7 +24,7 @@ export default function AboutPage() {
              <div className="space-y-6">
                  <h2 className="text-3xl font-bold">Our Mission</h2>
                  <p className="text-slate-400 leading-relaxed">
-                     We believe that data shouldn't be locked behind complex tools or expensive contracts. 
+                     We believe that data shouldn&apos;t be locked behind complex tools or expensive contracts. 
                      Our mission is to democratize data visualization, allowing you to turn a simple Excel sheet into 
                      a powerful dashboard in seconds.
                  </p>
@@ -59,8 +59,8 @@ export default function AboutPage() {
                          ))}
                      </div>
                  </div>
-                 <p className="text-xs text-slate-500">
-                     "InsightBoard has transformed how we view our weekly metrics. It's simply indispensable."
+                 <p className="text-xs text-slate-500 italic">
+                     &quot;InsightBoard has transformed how we view our weekly metrics. It&apos;s simply indispensable.&quot;
                  </p>
              </div>
          </div>

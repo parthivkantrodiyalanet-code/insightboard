@@ -2,23 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import Widget from '@/models/Widget';
 import Dashboard from '@/models/Dashboard';
-import jwt from 'jsonwebtoken';
+import { getUserFromToken } from '@/lib/api/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-
-/* Helper */
-async function getUserFromToken(request: NextRequest) {
-  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.split(' ')[1];
-  if (!token) return null;
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-    return decoded.userId;
-  } catch (error) {
-    return null;
-  }
-}
-
-/* POST Handler */
+/**
+ * POST /api/widgets
+ * Creates a new widget within a dashboard
+ */
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { stripe } from '@/lib/api/stripe';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 
+/**
+ * POST /api/stripe/webhook
+ * Handles Stripe webhook events to sync subscription status
+ */
 export async function POST(req: Request) {
   let event;
   const body = await req.text();
@@ -19,9 +23,10 @@ export async function POST(req: Request) {
         console.log('[Stripe Webhook] Skipping signature verification (Demo/Mock mode)');
         event = JSON.parse(body);
     }
-  } catch (err: any) {
-    console.error(`Webhook Error: ${err.message}`);
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Webhook Error';
+    console.error(`Webhook Error: ${errorMsg}`);
+    return NextResponse.json({ error: `Webhook Error: ${errorMsg}` }, { status: 400 });
   }
 
   // Handle the event

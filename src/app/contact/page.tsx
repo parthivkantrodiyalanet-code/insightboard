@@ -1,5 +1,5 @@
-import MarketingNavbar from '@/components/MarketingNavbar';
-import { MessageSquare, Mail, Phone, MapPin } from 'lucide-react';
+import MarketingNavbar from '@/components/layout/MarketingNavbar';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 export default function ContactPage() {
   return (
@@ -15,7 +15,7 @@ export default function ContactPage() {
          <div className="max-w-4xl mx-auto">
              <div className="text-center mb-16">
                  <h1 className="text-4xl md:text-5xl font-bold mb-4">Get in Touch</h1>
-                 <p className="text-slate-400">Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.</p>
+                 <p className="text-slate-400">Have questions? We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.</p>
              </div>
 
              <div className="grid md:grid-cols-2 gap-12">

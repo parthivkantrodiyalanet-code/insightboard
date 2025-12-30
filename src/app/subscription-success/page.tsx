@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -62,7 +62,7 @@ function SuccessContent() {
       {status === 'error' && (
         <div className="flex flex-col items-center">
            <h2 className="text-2xl font-bold text-rose-500">Something went wrong</h2>
-           <p className="text-slate-400 mt-2">We couldn't verify the payment given the demo key constraints.</p>
+           <p className="text-slate-400 mt-2">We couldn&apos;t verify the payment given the demo key constraints.</p>
            <Link href="/billing" className="mt-6 text-blue-400 hover:text-blue-300">Try Again</Link>
         </div>
       )}

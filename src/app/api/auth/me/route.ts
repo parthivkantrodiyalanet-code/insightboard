@@ -5,6 +5,10 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
+/**
+ * GET /api/auth/me
+ * Returns the current authenticated user's profile
+ */
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.split(' ')[1];
@@ -13,10 +17,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded: any = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     await connectToDatabase();
     
-    // Select name, email, role, createdAt, trial info
     const user = await User.findById(decoded.userId).select('name email role createdAt trialEndsAt isPaid');
     
     if (!user) {
@@ -24,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ user });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
   }
 }

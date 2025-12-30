@@ -3,10 +3,14 @@ import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
+/**
+ * GET /api/users
+ * Retrieves all users (excluding passwords)
+ * @returns Array of user objects
+ */
 export async function GET() {
   try {
     await connectToDatabase();
-    // Exclude password from the result
     const users = await User.find({}).select('-password');
     return NextResponse.json(users);
   } catch (error) {
@@ -15,11 +19,18 @@ export async function GET() {
   }
 }
 
+/**
+ * POST /api/users
+ * Creates a new user account with hashed password and 15-day trial
+ * @param request - Contains name, email, password, and optional role
+ * @returns Created user object (without password)
+ */
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
     const body = await request.json();
 
+    // Validate required fields
     if (!body.name || !body.email || !body.password) {
       return NextResponse.json(
         { error: 'Name, email, and password are required' },
@@ -27,7 +38,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user exists
+    // Check if user already exists
     const existingUser = await User.findOne({ email: body.email });
     if (existingUser) {
       return NextResponse.json(
@@ -36,9 +47,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password
+    // Hash password for security
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
+    // Set trial period (15 days from registration)
     const now = new Date();
     const trialEnds = new Date(now);
     trialEnds.setDate(trialEnds.getDate() + 15);
@@ -53,9 +65,11 @@ export async function POST(request: Request) {
       isPaid: false,
     });
 
-    const { password, ...userWithoutPassword } = newUser.toObject();
+    // Remove password from response
+    const userObj = newUser.toObject();
+    delete userObj.password;
 
-    return NextResponse.json(userWithoutPassword, { status: 201 });
+    return NextResponse.json(userObj, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
@@ -64,3 +78,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

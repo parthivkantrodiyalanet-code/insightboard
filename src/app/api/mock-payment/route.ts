@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/models/User';
-import { getCurrentUser } from '@/lib/auth-helper';
+import { getCurrentUser } from '@/lib/api/auth-helper';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
-export async function POST(req: Request) {
+/**
+ * POST /api/mock-payment
+ * Simulates a successful payment for demo/trial purposes
+ */
+export async function POST() {
   // This endpoint is ONLY for the demo environment to simulate payment
   
   const currentUser = await getCurrentUser();

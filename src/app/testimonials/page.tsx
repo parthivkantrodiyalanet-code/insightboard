@@ -1,4 +1,4 @@
-import MarketingNavbar from '@/components/MarketingNavbar';
+import { MarketingNavbar } from '@/components/layout';
 import { Star, Quote } from 'lucide-react';
 
 export default function TestimonialsPage() {
@@ -54,7 +54,7 @@ export default function TestimonialsPage() {
        <main className="container mx-auto px-6 py-20 relative z-10">
            <div className="text-center mb-16">
                <h1 className="text-4xl md:text-5xl font-bold mb-4">Loved by Founders & Teams</h1>
-               <p className="text-slate-400">Don't just take our word for it. See what our community has to say.</p>
+               <p className="text-slate-400">Don&apos;t just take our word for it. See what our community has to say.</p>
            </div>
 
            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -66,11 +66,11 @@ export default function TestimonialsPage() {
                                <Star 
                                  key={starIndex} 
                                  size={16} 
-                                 className={`${starIndex < t.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-700'}`} 
+                                 className={`${starIndex < t.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-700'}`}  
                                 />
                            ))}
                        </div>
-                       <p className="text-slate-300 mb-6 italic">"{t.text}"</p>
+                       <p className="text-slate-300 mb-6 italic">&quot;{t.text}&quot;</p>
                        <div className="flex items-center gap-4">
                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center font-bold text-white">
                                {t.name.charAt(0)}

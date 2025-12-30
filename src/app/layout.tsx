@@ -8,11 +8,15 @@ export const metadata = {
   description: "Advanced Excel to Dashboard SaaS Platform",
 }
 
+import Providers from '@/components/Providers';
+
 const layout = ({children}: {children:React.ReactNode}) => {
   return (
     <html lang="en">
       <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-100 selection:bg-blue-500/30`}>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

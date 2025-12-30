@@ -1,21 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import Dataset from '@/models/Dataset';
-import jwt from 'jsonwebtoken';
+import { getUserFromToken } from '@/lib/api/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-
-async function getUserFromToken(request: NextRequest) {
-  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.split(' ')[1];
-  if (!token) return null;
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-    return decoded.userId;
-  } catch (error) {
-    return null;
-  }
-}
-
+/**
+ * GET /api/datasets
+ * Retrieves all datasets for the authenticated user
+ */
 export async function GET(request: NextRequest) {
    try {
     await connectToDatabase();
@@ -25,6 +16,7 @@ export async function GET(request: NextRequest) {
     const datasets = await Dataset.find({ userId }).select('name createdAt updatedAt');
     return NextResponse.json(datasets);
   } catch (error) {
+    console.error('Fetch datasets error:', error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }
@@ -62,7 +54,8 @@ export async function POST(request: NextRequest) {
     });
     
     return NextResponse.json(dataset, { status: 201 });
-  } catch(e) {
+  } catch (e) {
+      console.error('Create dataset error:', e);
       return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }

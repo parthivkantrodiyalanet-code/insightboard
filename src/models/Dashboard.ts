@@ -5,6 +5,7 @@ const DashboardSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+    index: true,
   },
   datasetId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,7 +18,11 @@ const DashboardSchema = new Schema({
   },
   description: {
     type: String,
-  }
+  },
+  isDemo: {
+    type: Boolean,
+    default: false,
+  },
 }, { timestamps: true });
 
 const Dashboard = models.Dashboard || model('Dashboard', DashboardSchema);

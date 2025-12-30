@@ -1,23 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import Chart from '@/models/Chart';
 import Dataset from '@/models/Dataset';
-import jwt from 'jsonwebtoken';
+import { getUserFromToken } from '@/lib/api/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-
-async function getUserFromToken(request: Request) {
-  const token = request.headers.get('authorization')?.split(' ')[1];
-  if (!token) return null;
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-    return decoded.userId;
-  } catch (error) {
-    return null;
-  }
-}
-
-export async function GET(request: Request) {
+/**
+ * GET /api/charts
+ * Returns all charts for the authenticated user
+ */
+export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
     const userId = await getUserFromToken(request);
@@ -28,13 +19,13 @@ export async function GET(request: Request) {
 
     const charts = await Chart.find({ userId }).populate('datasetId');
     return NextResponse.json(charts);
-  } catch (error) {
-    console.error('Fetch charts error:', error);
+  } catch {
+    // Specifically handle expired tokens vs malformed ones if needed
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     const userId = await getUserFromToken(request);

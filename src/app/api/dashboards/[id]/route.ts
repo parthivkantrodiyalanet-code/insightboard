@@ -4,21 +4,12 @@ import connectToDatabase from '@/lib/db';
 import Dashboard from '@/models/Dashboard';
 import Widget from '@/models/Widget';
 import Dataset from '@/models/Dataset';
-import jwt from 'jsonwebtoken';
+import { getUserFromToken } from '@/lib/api/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-
-async function getUserFromToken(request: NextRequest) {
-  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.split(' ')[1];
-  if (!token) return null;
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-    return decoded.userId;
-  } catch (error) {
-    return null;
-  }
-}
-
+/**
+ * GET /api/dashboards/[id]
+ * Retrieves a single dashboard and its widgets
+ */
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {

@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/lib/auth-helper'
+import { getCurrentUser } from '@/lib/api/auth-helper'
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 

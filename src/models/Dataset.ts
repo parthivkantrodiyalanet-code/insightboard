@@ -5,6 +5,7 @@ const DatasetSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+    index: true,
   },
   name: {
     type: String, // Original filename or user-given name
@@ -13,6 +14,10 @@ const DatasetSchema = new Schema({
   data: {
     type: Array, // Array of objects (rows)
     required: true,
+  },
+  insights: {
+    type: Object, // { keyInsights: [], risks: [], recommendations: [], generatedAt: Date }
+    default: null,
   },
 }, { timestamps: true });
 

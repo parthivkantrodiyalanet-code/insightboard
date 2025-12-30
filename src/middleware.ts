@@ -1,16 +1,21 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
+/**
+ * Next.js Middleware
+ * Handles authentication, trial period validation, and security headers
+ * Runs on every request matching the config.matcher pattern
+ */
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('token')?.value
-  const { pathname } = request.nextUrl
+  const token = request.cookies.get('token')?.value;
+  const { pathname } = request.nextUrl;
 
-  // Define public paths that don't need auth checking or trial checking
-  const publicPaths = ['/login', '/register', '/api/auth/login', '/api/users']
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
+  // Public paths that don't require authentication
+  const publicPaths = ['/login', '/register', '/api/auth/login', '/api/users'];
+  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
 
-  // Define paths allowed even if trial expired
+  // Paths accessible even when trial has expired
   const trialExpiredAllowedPaths = [
     '/pricing', 
     '/billing', 
@@ -19,79 +24,86 @@ export async function middleware(request: NextRequest) {
     '/profile', 
     '/subscription-success',
     '/subscription-cancelled',
-    '/api/stripe/webhook' // allow webhook
-  ]
+    '/api/stripe/webhook'
+  ];
   
-  const isTrialExpiredAllowed = trialExpiredAllowedPaths.some(path => pathname.startsWith(path))
+  const isTrialExpiredAllowed = trialExpiredAllowedPaths.some(path => pathname.startsWith(path));
 
-  // 1. Redirect if authenticated user tries to access login/register
+  // Redirect authenticated users away from login/register pages
   if (isPublicPath && token) {
-    // We need to verify token valid before redirecting, technically, 
-    // but usually existence is enough for this UX optimization.
-    // However, if we want to be strict, we verify. 
     try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret')
-        await jwtVerify(token, secret)
-        // If valid, redirect to dashboard
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-    } catch (e) {
-        // invalid token, let them stay on login
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret');
+      await jwtVerify(token, secret);
+      // Valid token - redirect to dashboard
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    } catch {
+      // Invalid token - allow access to public pages
     }
   }
 
-  // 2. Protect protected routes
-  // Basically anything not public is protected? 
-  // The user said "Block access to all /dashboard/* routes" 
-  // Let's assume protection is needed for /dashboard and similar.
-  // We'll enforce auth for everything EXCEPT public paths.
-  
+  let response = NextResponse.next();
+
+  // Authentication and trial validation for protected routes
   if (!isPublicPath) {
     if (!token) {
-       // Allow if it's one of the "allowed" pages? No, /pricing might be public.
-       // The user prompt says: "IF user is authenticated AND..."
-       // This implies if NOT authenticated, standard protection applies.
-       
-       // Let's assume /pricing is public.
-       if (pathname === '/pricing') return NextResponse.next();
-       
-       return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    // User is authenticated. Check Trial Logic.
-    try {
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret')
-      const { payload } = await jwtVerify(token, secret)
-      
-      const trialEndsAt = payload.trialEndsAt ? new Date(payload.trialEndsAt as string) : null
-      const isPaid = payload.isPaid === true
-      
-      // Logic: trialEndsAt < current date AND isPaid === false
-      if (trialEndsAt && new Date() > trialEndsAt && !isPaid) {
-          // Block /dashboard access
-          if (pathname.startsWith('/dashboard') && !isTrialExpiredAllowed) {
-              return NextResponse.redirect(new URL('/pricing', request.url))
-          }
+      // Allow unauthenticated access to pricing page
+      if (pathname === '/pricing') {
+        response = NextResponse.next();
+      } else {
+        // Redirect to login for all other protected routes
+        response = NextResponse.redirect(new URL('/login', request.url));
       }
-
-    } catch (error) {
-      // Token invalid
-      return NextResponse.redirect(new URL('/login', request.url))
+    } else {
+      try {
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret');
+        const { payload } = await jwtVerify(token, secret);
+        
+        const trialEndsAt = payload.trialEndsAt ? new Date(payload.trialEndsAt as string) : null;
+        const isPaid = payload.isPaid === true;
+        
+        // Check if trial has expired and user hasn't paid
+        if (trialEndsAt && new Date() > trialEndsAt && !isPaid) {
+          if (pathname.startsWith('/dashboard') && !isTrialExpiredAllowed) {
+            // Redirect to pricing page if trial expired
+            response = NextResponse.redirect(new URL('/pricing', request.url));
+          }
+        }
+      } catch {
+        // Invalid token - redirect to login
+        response = NextResponse.redirect(new URL('/login', request.url));
+      }
     }
   }
 
-  return NextResponse.next()
+  /**
+   * Security Headers
+   * Implements industry-standard security headers to protect against common vulnerabilities
+   */
+  const securityHeaders = {
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://generativelanguage.googleapis.com;",
+    'Referrer-Policy': 'origin-when-cross-origin',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+  };
+
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+
+  return response;
 }
 
+/**
+ * Middleware Configuration
+ * Defines which routes the middleware should run on
+ * Excludes static files and Next.js internal routes
+ */
 export const config = {
-  // tailored matcher to run on relevant paths
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (except strict ones we want to capture? No, usually exclude api from redirect loops)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
-}
+};
+

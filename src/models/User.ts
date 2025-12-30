@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import { Schema, model, models } from 'mongoose';
 
 const UserSchema = new Schema({
   name: {
@@ -37,7 +37,21 @@ const UserSchema = new Schema({
     type: String,
     default: null,
   },
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: {
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.password;
+      return ret;
+    }
+  },
+  toObject: {
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.password;
+      return ret;
+    }
+  }
+});
 
 const User = models.User || model('User', UserSchema);
 

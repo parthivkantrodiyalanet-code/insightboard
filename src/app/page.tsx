@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import MarketingNavbar from '@/components/MarketingNavbar';
+import MarketingNavbar from '@/components/layout/MarketingNavbar';
 import { ArrowRight, BarChart2, Lock, Zap } from 'lucide-react';
 
 export default function Home() {
