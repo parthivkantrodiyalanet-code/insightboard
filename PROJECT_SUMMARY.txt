@@ -15,6 +15,8 @@ InsightBoard is a comprehensive web application that enables users to:
 - Upload Excel files and convert them into interactive datasets
 - Create multiple dashboards to visualize and analyze data
 - Generate beautiful, customizable charts and widgets
+- Advanced Data Filtering: Date range filtering with automatic column detection
+- PDF Reporting: Export comprehensive visual reports with AI insights
 - AI-Powered Insights: Automatic trend analysis and recommendations using Gemini AI
 - Seamless Onboarding: Pre-seeded demo datasets and "Instant Preview" demo mode
 - Secure authentication system with JWT-based access control
@@ -471,6 +473,24 @@ KPI CARD COMPONENT (KPICard.tsx):
 - Color coded (green for positive, red for negative)
 - Used for key business metrics
 
+CHART LOADER COMPONENT (ChartLoader.tsx):
+- Custom animated loader with staggered bar effect
+- Visual feedback during data processing
+- Gradient styling for premium feel
+- Prevents hydration mismatches using global animations
+
+CONFIRM DIALOG COMPONENT (ConfirmDialog.tsx):
+- Reusable modal for destructive actions
+- Backdrop blur and glassmorphism styling
+- customizable title, message, and action buttons
+- "Danger" and "Info" variants
+
+DOWNLOAD PDF COMPONENT (DownloadPDFButton.tsx):
+- Generates high-quality PDF reports
+- Captures current dashboard state via html-to-image
+- Includes branding and timestamp
+- Handles multi-page generation automatically
+
 ================================================================================
 8. USER FLOW & WORKFLOW
 ================================================================================
@@ -681,6 +701,12 @@ CORE FEATURES:
    - Middleware route protection
    - Role-based authorization
 
+8. ADVANCED REPORTING & TOOLS
+   - Date Range Picker (Start/End)
+   - PDF Export with Visuals and Insights
+   - Automatic excel date format handling
+   - Subscription Management (Cancel functionality)
+
 FUTURE ENHANCEMENT OPPORTUNITIES:
 
 - Real-time collaboration on dashboards
@@ -689,7 +715,6 @@ FUTURE ENHANCEMENT OPPORTUNITIES:
 - Advanced filtering and aggregation
 - Custom SQL queries
 - Machine learning insights
-- Export to PDF/image formats
 - Dashboard sharing and public links
 - Data retention policies
 - Activity logging and audit trails
@@ -733,6 +758,17 @@ DATABASE CONNECTION:
 - Connection pooling managed by Mongoose
 - Schema validation at document creation
 - Indexes on userId for query optimization
+
+DATE PARSING & FILTERING LOGIC:
+- Robust Date Detection:
+  * Prioritizes columns named "Date", "Timestamp", "Created"
+  * Analyzes data content to detect date patterns
+  * Handles Excel Serial Numbers (e.g., 45992 -> date)
+  * Supports various string formats (ISO, DD/MM/YYYY, Month names)
+- Filtering Engine:
+  * Memoized filtering using useMemo for performance
+  * Normalizes all dates to local time for accurate range comparison
+  * Filters charts and KPIs instantly upon date selection
 
 STYLING & UI DESIGN:
 - Framework: Tailwind CSS 4.0 (utility-first)

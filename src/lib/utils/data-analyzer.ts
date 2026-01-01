@@ -1,3 +1,5 @@
+import { parseDate, isDateColumn } from "@/lib/utils/date-helpers";
+
 export interface DataSummary {
   datasetName: string;
   totalRows: number;
@@ -25,15 +27,8 @@ export function generateDataSummary(name: string, data: Record<string, unknown>[
     data.every(row => typeof row[col] === 'number' || !isNaN(Number(row[col])))
   );
 
-  // Identify date columns (simple check)
-  const dateColumns = columns.filter(col => {
-    const val = data[0][col];
-    if (typeof val === 'string') {
-      const date = new Date(val);
-      return !isNaN(date.getTime()) && (val.includes('-') || val.includes('/') || ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].some(m => val.toLowerCase().includes(m)));
-    }
-    return false;
-  });
+  // Identify date columns using robust helper
+  const dateColumns = columns.filter(col => isDateColumn(data, col));
 
   const kpis: Record<string, number> = {};
   numericColumns.forEach(col => {
@@ -49,20 +44,40 @@ export function generateDataSummary(name: string, data: Record<string, unknown>[
   // Basic trend detection if we have a sequence
   if (numericColumns.length > 0) {
     const mainCol = numericColumns[0];
-    const firstVal = Number(data[0][mainCol]);
-    const lastVal = Number(data[data.length - 1][mainCol]);
+    const dateCol = dateColumns[0] || columns.find(c => /month|year/i.test(c)) || columns[0];
+
+    // Sort by date if available
+    let sortedData = [...data];
+    if (dateColumns.length > 0) {
+        sortedData.sort((a, b) => {
+            const dateA = parseDate(a[dateColumns[0]]) || new Date(0);
+            const dateB = parseDate(b[dateColumns[0]]) || new Date(0);
+            return dateA.getTime() - dateB.getTime();
+        });
+    }
+
+    const firstVal = Number(sortedData[0][mainCol]);
+    const lastVal = Number(sortedData[sortedData.length - 1][mainCol]);
     
     if (firstVal !== 0) {
       const change = ((lastVal - firstVal) / firstVal) * 100;
       trends['overallChange'] = `${change > 0 ? '+' : ''}${change.toFixed(1)}%`;
     }
 
-    // Find best and worst periods if date/sequence exists
+    // Find best and worst periods
+    // Re-sort by value to find max/min
     const sortedByVal = [...data].sort((a, b) => Number(b[mainCol]) - Number(a[mainCol]));
-    const bestVal = sortedByVal[0][dateColumns[0] || columns[0]];
-    const worstVal = sortedByVal[sortedByVal.length - 1][dateColumns[0] || columns[0]];
-    trends['bestPeriod'] = (bestVal as string | number) || '';
-    trends['worstPeriod'] = (worstVal as string | number) || '';
+    const bestVal = sortedByVal[0][dateCol];
+    const worstVal = sortedByVal[sortedByVal.length - 1][dateCol];
+    
+    // Format best/worst values if they are dates
+    const formatVal = (val: any) => {
+        const d = parseDate(val);
+        return d ? d.toLocaleDateString() : (val as string | number);
+    };
+
+    trends['bestPeriod'] = formatVal(bestVal) || '';
+    trends['worstPeriod'] = formatVal(worstVal) || '';
   }
 
   return {

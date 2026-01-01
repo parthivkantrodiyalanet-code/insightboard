@@ -2,9 +2,8 @@ import { DataSummary } from './data-analyzer';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 export async function fetchAIInsights(summary: DataSummary) {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
+  if (!GEMINI_API_KEY) {
     return {
       keyInsights: ["Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file to enable real AI insights."],
       risks: ["System running in demo/offline mode."],

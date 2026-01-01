@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,11 +11,18 @@ import {
   Check,
   LayoutDashboard,
   Sparkles,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { DashboardChart, KPICard } from "@/components/charts";
-import { DownloadPDFButton, AIInsights, Spinner } from "@/components/ui";
+import {
+  DownloadPDFButton,
+  AIInsights,
+  ChartLoader,
+  ConfirmDialog,
+} from "@/components/ui";
 import * as XLSX from "xlsx";
+import { parseDate, isDateColumn } from "@/lib/utils/date-helpers";
 
 interface Dataset {
   _id: string;
@@ -85,6 +92,110 @@ export default function DashboardBuilder() {
 
   const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
+
+  // Date Filtering State
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: "",
+    end: "",
+  });
+
+  // Confirmation Dialog State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: "danger" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    type: "info",
+  });
+
+  // Helper to open confirmation
+  const askConfirmation = (
+    title: string,
+    message: string,
+    action: () => void,
+    type: "danger" | "info" = "info"
+  ) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        action();
+        setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
+      },
+      type,
+    });
+  };
+
+  // Memoized Filtered Data (Performance Optimization)
+  // Memoized Filtered Data (Performance Optimization)
+  const filteredData = React.useMemo(() => {
+    if (!data.length) return [];
+    if (!dateRange.start && !dateRange.end) return data;
+
+    // Correctly parse local start/end dates from YYYY-MM-DD inputs
+    const parseInputDate = (str: string) => {
+      if (!str) return null;
+      const [y, m, d] = str.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
+
+    const start = parseInputDate(dateRange.start);
+    const end = parseInputDate(dateRange.end);
+
+    // Detect date column: Prefer columns with explicit "date" naming
+    const candidates = columns.filter((col) => isDateColumn(data, col));
+
+    // Priority 1: Explicit 'date' or 'timestamp' in name (e.g., "Date", "Order Date", "Timestamp")
+    let dateCol = candidates.find((col) =>
+      /date|timestamp|joined|created|updated/i.test(col)
+    );
+
+    // Priority 2: Fallback to other time-related terms, but exclude 'month'/'day' if a better candidate exists
+    if (!dateCol) {
+      dateCol = candidates.find((col) => /time|year/i.test(col));
+    }
+
+    // Priority 3: If nothing else, allow Month/Day or just take the first candidate
+    if (!dateCol && candidates.length > 0) {
+      // Try not to pick partial date columns if full date columns exist (though step 1 covers most)
+      dateCol = candidates[0];
+    }
+
+    // Debugging: Log the selected date column to help troubleshooting
+    if (process.env.NODE_ENV === "development" && dateCol) {
+      console.log(`[Dashboard] Filtering using date column: ${dateCol}`);
+    }
+
+    if (!dateCol) return data;
+
+    return data.filter((row) => {
+      const raw = row[dateCol as string];
+      const rowDate = parseDate(raw);
+
+      if (!rowDate) return true; // Keep if passed verification but individual cell failed
+
+      // Reset time for accurate date-only comparison
+      rowDate.setHours(0, 0, 0, 0);
+
+      if (start) {
+        start.setHours(0, 0, 0, 0);
+        if (rowDate < start) return false;
+      }
+      if (end) {
+        end.setHours(0, 0, 0, 0);
+        if (rowDate > end) return false;
+      }
+
+      return true;
+    });
+  }, [data, dateRange, columns]);
 
   // Fetch dashboard data
   const {
@@ -305,12 +416,19 @@ export default function DashboardBuilder() {
           };
         }
       );
+      toast.success("Widget removed (Demo)");
       return;
     }
-    if (confirm("Delete widget?")) deleteWidgetMutation.mutate(id);
+
+    askConfirmation(
+      "Delete Widget",
+      "Are you sure you want to remove this widget from your dashboard?",
+      () => deleteWidgetMutation.mutate(id),
+      "danger"
+    );
   };
 
-  if (isLoading) return <Spinner size="lg" className="mt-20" />;
+  if (isLoading) return <ChartLoader className="mt-40" />;
   if (isError || !dashboard)
     return (
       <div className="p-20 text-center">
@@ -328,7 +446,7 @@ export default function DashboardBuilder() {
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
           {isEditingTitle ? (
             <div className="flex items-center gap-2">
@@ -371,8 +489,40 @@ export default function DashboardBuilder() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex bg-slate-800 p-1 rounded-xl mr-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Date Range Picker */}
+          <div className="flex items-center gap-2 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+            <CalendarIcon size={16} className="text-slate-400 ml-2" />
+            <input
+              type="date"
+              className="bg-transparent text-xs text-white focus:outline-none w-[100px] [color-scheme:dark]"
+              value={dateRange.start}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, start: e.target.value }))
+              }
+              placeholder="Start"
+            />
+            <span className="text-slate-500">-</span>
+            <input
+              type="date"
+              className="bg-transparent text-xs text-white focus:outline-none w-[100px] [color-scheme:dark]"
+              value={dateRange.end}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, end: e.target.value }))
+              }
+              placeholder="End"
+            />
+            {(dateRange.start || dateRange.end) && (
+              <button
+                onClick={() => setDateRange({ start: "", end: "" })}
+                className="text-xs text-red-400 hover:text-red-300 px-2"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="flex bg-slate-800 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab("dashboard")}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
@@ -418,8 +568,19 @@ export default function DashboardBuilder() {
           <div id="dashboard-content" className="space-y-8">
             <DashboardWidgets
               widgets={widgets}
-              data={data}
+              data={filteredData}
               deleteWidget={deleteWidget}
+            />
+            {/* Confirmation Dialog */}
+            <ConfirmDialog
+              isOpen={confirmConfig.isOpen}
+              title={confirmConfig.title}
+              message={confirmConfig.message}
+              onConfirm={confirmConfig.onConfirm}
+              onCancel={() =>
+                setConfirmConfig((prev) => ({ ...prev, isOpen: false }))
+              }
+              type={confirmConfig.type}
             />
           </div>
         )}
@@ -435,8 +596,7 @@ export default function DashboardBuilder() {
               {dashboard.name}
             </h1>
             <p className="text-slate-400">
-              Generated on {new Date().toLocaleDateString()} • InsightBoard
-              Analytics
+              Generated Report • InsightBoard Analytics
             </p>
           </div>
 
@@ -446,7 +606,7 @@ export default function DashboardBuilder() {
             </h2>
             <DashboardWidgets
               widgets={widgets}
-              data={data}
+              data={filteredData}
               deleteWidget={() => {}}
             />
           </div>

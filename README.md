@@ -65,6 +65,8 @@ insightboard/
 ## 🚀 Features
 
 - **📊 Interactive Dashboards**: Create multiple dashboards with various chart types (bar, line, area)
+- **📅 Advanced Filtering**: Robust date range filtering with support for Excel serial dates
+- **📄 PDF Export**: Generate professional reports with one-click PDF export
 - **📈 KPI Cards**: Display key metrics with glassmorphism design
 - **🤖 AI Insights**: Gemini AI-powered data analysis and recommendations
 - **🔐 Authentication**: Secure JWT-based auth with trial period management

@@ -106,6 +106,7 @@ insightboard/
     │   │   ├── AIInsights.tsx        # AI insights display
     │   │   ├── DashboardList.tsx     # Dashboard list component
     │   │   ├── DownloadPDFButton.tsx # PDF export button
+    │   │   ├── ConfirmDialog.tsx     # Confirmation dialog modal
     │   │   └── index.ts              # Barrel export
     │   │
     │   ├── 📂 charts/                # Chart Components
@@ -132,6 +133,7 @@ insightboard/
     │   │
     │   └── 📂 utils/                 # General Utilities
     │       ├── data-analyzer.ts      # Data analysis functions
+    │       ├── date-helpers.ts       # Date parsing and detection
     │       └── gemini.ts             # Google Gemini AI integration
     │
     ├── 📂 models/                    # Mongoose Models
@@ -310,4 +312,4 @@ npm start            # Start production server
 
 ---
 
-**Last Updated**: 2025-12-30
+**Last Updated**: 2026-01-01

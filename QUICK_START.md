@@ -312,4 +312,4 @@ return NextResponse.json({ data });
 
 ---
 
-_Last Updated: December 30, 2025_
+_Last Updated: January 1, 2026_
