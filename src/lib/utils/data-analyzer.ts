@@ -18,7 +18,7 @@ export function generateDataSummary(name: string, data: Record<string, unknown>[
       trends: {},
     };
   }
-
+console.log(data);
   const columns = Object.keys(data[0]);
   const totalRows = data.length;
 

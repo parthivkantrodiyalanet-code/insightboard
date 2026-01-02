@@ -1,21 +1,52 @@
-import { DataSummary } from './data-analyzer';
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { DataSummary } from "./data-analyzer";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 export async function fetchAIInsights(summary: DataSummary) {
   if (!GEMINI_API_KEY) {
     return {
-      keyInsights: ["Gemini API Key is missing. Please add GEMINI_API_KEY to your .env file to enable real AI insights."],
-      risks: ["System running in demo/offline mode."],
-      recommendations: ["Configure your API environment variables."]
+      keyInsights: ["Gemini API Key is missing..."],
+      risks: ["System running in demo mode."],
+      recommendations: ["Configure your API environment variables."],
     };
   }
 
-  const prompt = `
-You are a business data analyst.
+  try {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    // const models = await genAI.listModels();
+    // console.log(models);
 
+    // Using 1.5 Flash is smart—it's fast and cheap (or free)
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            keyInsights: {
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING },
+            },
+            risks: {
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING },
+            },
+            recommendations: {
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING },
+            },
+          },
+          required: ["keyInsights", "risks", "recommendations"],
+        },
+      },
+    });
+
+    const prompt = `
+      You are a business data analyst.
 Analyze the following summarized dataset and provide:
+
 1. Key insights (3-5 points)
 2. Risks or warnings (1-2 points)
 3. Actionable recommendations (2-3 points)
@@ -23,52 +54,24 @@ Analyze the following summarized dataset and provide:
 Keep the explanation simple and business-friendly.
 Avoid technical terms.
 
-Return the result as a JSON object with the following structure:
-{
-  "keyInsights": ["string"],
-  "risks": ["string"],
-  "recommendations": ["string"]
-}
-
 DATA:
 ${JSON.stringify(summary, null, 2)}
 `;
 
-  try {
-    const response = await fetch(GEMINI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          response_mime_type: "application/json",
-        }
-      }),
-    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
-    }
+    // Clean the text just in case Gemini adds markdown formatting
+    const cleanedText = text.replace(/```json|```/g, "").trim();
 
-    const result = await response.json();
-    const content = result.candidates[0].content.parts[0].text;
-    return JSON.parse(content);
+    return JSON.parse(cleanedText);
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
+    console.error("Gemini API Error:", error);
+    // Return the same structure so the UI doesn't break
     return {
-      keyInsights: ["Failed to generate insights from AI. Please try again later."],
-      risks: ["AI service disruption."],
-      recommendations: ["Contact support or check your internet connection."]
+      keyInsights: ["Error connecting to AI."],
+      risks: ["Check API Quota/Key."],
+      recommendations: ["Retry in 60 seconds."],
     };
   }
 }

@@ -274,6 +274,23 @@ export default function DashboardBuilder() {
     onError: () => toast.error("Failed to generate insights"),
   });
 
+  // Mutation for FORCE generating AI insights
+  const regenerateInsightsMutation = useMutation({
+    mutationFn: async (datasetId: string) => {
+      const res = await fetch("/api/insights/force-regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ datasetId }),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", params.id] });
+      toast.success("Insights regenerated successfully!");
+    },
+    onError: () => toast.error("Failed to regenerate insights"),
+  });
+
   // Mutation for adding new widgets
   const widgetMutation = useMutation({
     mutationFn: async (newWidget: {
@@ -320,13 +337,18 @@ export default function DashboardBuilder() {
 
   const handleUpdateTitle = () => updateTitleMutation.mutate(newTitle);
 
-  const loadAIInsights = () => {
+  const loadAIInsights = (force = false) => {
     if (params.id === "demo") {
       toast.error("Demo mode insights are static");
       return;
     }
-    if (dashboard?.datasetId?._id)
-      insightsMutation.mutate(dashboard.datasetId._id);
+    if (dashboard?.datasetId?._id) {
+      if (force) {
+        regenerateInsightsMutation.mutate(dashboard.datasetId._id);
+      } else {
+        insightsMutation.mutate(dashboard.datasetId._id);
+      }
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -561,8 +583,10 @@ export default function DashboardBuilder() {
         {activeTab === "insights" ? (
           <AIInsights
             insights={insights}
-            loading={insightsMutation.isPending}
-            onRetry={loadAIInsights}
+            loading={
+              insightsMutation.isPending || regenerateInsightsMutation.isPending
+            }
+            onRetry={() => loadAIInsights(true)}
           />
         ) : (
           <div id="dashboard-content" className="space-y-8">
