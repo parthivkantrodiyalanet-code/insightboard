@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(request.body);
     const body = await request.json();
     const dashboard = await Dashboard.create({
       userId,

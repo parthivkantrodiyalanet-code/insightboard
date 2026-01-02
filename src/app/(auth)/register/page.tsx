@@ -1,42 +1,43 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, Loader2, ArrowRight } from 'lucide-react';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Mail, Lock, User, Loader2, ArrowRight } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
+    name: "",
+    email: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const res = await fetch('/api/users', { // Using existing users route for registration
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/users", {
+        // Using existing users route for registration
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(data.error || "Registration failed");
       }
 
       // Auto login or redirect to login
-      router.push('/login?registered=true');
+      router.push("/login?registered=true");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -63,47 +64,59 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300 ml-1">Full Name</label>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-300 ml-1">
+              Full Name
+            </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
               <input
                 type="text"
                 required
-                className="input-field pl-10"
+                className="input-field"
                 placeholder="John Doe"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300 ml-1">Email</label>
+            <label className="text-sm font-medium text-slate-300 ml-1">
+              Email
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
               <input
                 type="email"
                 required
-                className="input-field pl-10"
+                className="input-field "
                 placeholder="you@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300 ml-1">Password</label>
+            <label className="text-sm font-medium text-slate-300 ml-1">
+              Password
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
               <input
                 type="password"
                 required
-                className="input-field pl-10"
+                className="input-field "
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
               />
             </div>
           </div>
@@ -125,8 +138,11 @@ export default function RegisterPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-400">
-          Already have an account?{' '}
-          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          >
             Sign in
           </Link>
         </div>

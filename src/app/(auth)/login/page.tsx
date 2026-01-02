@@ -1,55 +1,55 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       // In a real app with NextAuth, you'd use signIn() here.
       // Since we are building manual auth for "practice MERN" / custom requirement:
       // We'll just verify credentials against our API (which we need to make for login!)
-      // Wait, I forgot to make the /api/auth/login route! 
+      // Wait, I forgot to make the /api/auth/login route!
       // I'll assume it exists or create it next.
-      
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || "Login failed");
       }
 
       // Store token (in real app, use HTTP-only cookies via API)
       // For this demo, we might store in localStorage or cookie.
       // Ideally, the API sets a cookie.
       if (data.token) {
-        localStorage.setItem('token', data.token); // Fallback if cookie not set
+        localStorage.setItem("token", data.token); // Fallback if cookie not set
         // Also stick it in document.cookie for middleware if needed
-        document.cookie = `token=${data.token}; path=/`; 
+        document.cookie = `token=${data.token}; path=/`;
       }
-      
-      router.push('/dashboard');
+
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
@@ -77,31 +77,39 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300 ml-1">Email</label>
+            <label className="text-sm font-medium text-slate-300 ml-1">
+              Email
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 mr-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
               <input
                 type="email"
                 required
-                className="input-field pl-10"
+                className="input-field pl-[40px]"
                 placeholder="you@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300 ml-1">Password</label>
+            <label className="text-sm font-medium text-slate-300 ml-1">
+              Password
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
               <input
                 type="password"
                 required
-                className="input-field pl-10"
+                className="input-field pl-[40px]"
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
               />
             </div>
           </div>
@@ -123,8 +131,11 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-400">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/register"
+            className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+          >
             Create account
           </Link>
         </div>

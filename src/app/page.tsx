@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import MarketingNavbar from '@/components/layout/MarketingNavbar';
-import { ArrowRight, BarChart2, Lock, Zap } from 'lucide-react';
+import Link from "next/link";
+import MarketingNavbar from "@/components/layout/MarketingNavbar";
+import { ArrowRight, BarChart2, Lock, Zap } from "lucide-react";
 
 export default function Home() {
   return (
@@ -19,25 +19,28 @@ export default function Home() {
           <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
           New: Excel 2.0 Integration
         </div>
-        
+
         <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-          Turn Data into <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Decisions</span>
+          Turn Data into{" "}
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">
+            Decisions
+          </span>
         </h1>
-        
+
         <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-          Upload your Excel files and instantly generate beautiful, interactive dashboards. 
-          Secure, fast, and no coding required.
+          Upload your Excel files and instantly generate beautiful, interactive
+          dashboards. Secure, fast, and no coding required.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-          <Link 
-            href="/register" 
+          <Link
+            href="/register"
             className="px-8 py-4 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-lg font-semibold shadow-lg shadow-blue-500/25 transition-all hover:scale-105 flex items-center gap-2"
           >
             Get Started Free <ArrowRight size={20} />
           </Link>
-          <Link 
-            href="/dashboard" 
+          <Link
+            href="/dashboard"
             className="px-8 py-4 rounded-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-lg font-semibold transition-all"
           >
             View Demo
@@ -52,64 +55,108 @@ export default function Home() {
             </div>
             <h3 className="text-xl font-semibold mb-3">Instant Visuals</h3>
             <p className="text-slate-400">
-              Automatic parsing of Excel/CSV files. Just drag, drop, and see your data come to life.
+              Automatic parsing of Excel/CSV files. Just drag, drop, and see
+              your data come to life.
             </p>
           </div>
           <div className="glass-card p-8 hover:-translate-y-2 transition-transform duration-300">
-             <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-6 text-purple-400">
+            <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-6 text-purple-400">
               <BarChart2 size={24} />
             </div>
             <h3 className="text-xl font-semibold mb-3">Custom Analytics</h3>
             <p className="text-slate-400">
-              Choose your metrics, customize chart types, and build a personalized dashboard.
+              Choose your metrics, customize chart types, and build a
+              personalized dashboard.
             </p>
           </div>
           <div className="glass-card p-8 hover:-translate-y-2 transition-transform duration-300">
-             <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-6 text-emerald-400">
+            <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-6 text-emerald-400">
               <Lock size={24} />
             </div>
             <h3 className="text-xl font-semibold mb-3">Enterprise Security</h3>
             <p className="text-slate-400">
-              Bank-grade encryption for your data. built with secure JWT authentication.
+              Bank-grade encryption for your data. built with secure JWT
+              authentication.
             </p>
           </div>
         </div>
       </main>
 
-       {/* Footer */}
-       <footer className="border-t border-slate-800 bg-slate-900/50 relative z-10">
-           <div className="container mx-auto px-6 py-12">
-               <div className="grid md:grid-cols-4 gap-8 mb-8">
-                   <div className="col-span-1 md:col-span-2">
-                       <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-4">
-                           InsightBoard
-                       </h2>
-                       <p className="text-slate-400 max-w-sm">
-                           Turn your data into actionable insights with the fastest dashboard builder on the market.
-                       </p>
-                   </div>
-                   <div>
-                       <h4 className="font-bold mb-4 text-white">Product</h4>
-                       <ul className="space-y-2 text-slate-400 text-sm">
-                           <li><Link href="/pricing" className="hover:text-blue-400">Pricing</Link></li>
-                           <li><Link href="/dashboard" className="hover:text-blue-400">Dashboard</Link></li>
-                           <li><Link href="/testimonials" className="hover:text-blue-400">Testimonials</Link></li>
-                       </ul>
-                   </div>
-                   <div>
-                       <h4 className="font-bold mb-4 text-white">Company</h4>
-                       <ul className="space-y-2 text-slate-400 text-sm">
-                           <li><Link href="/about" className="hover:text-blue-400">About Us</Link></li>
-                           <li><Link href="/contact" className="hover:text-blue-400">Contact</Link></li>
-                           <li><Link href="/login" className="hover:text-blue-400">Sign In</Link></li>
-                       </ul>
-                   </div>
-               </div>
-               <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-                   © {new Date().getFullYear()} InsightBoard. All rights reserved.
-               </div>
-           </div>
-       </footer>
+      {/* Footer */}
+      <footer className="border-t border-slate-800 bg-slate-900/50 relative z-10">
+        <div className="container mx-auto px-6 py-12">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div className="col-span-1 md:col-span-2">
+              <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-4">
+                InsightBoard
+              </h2>
+              <p className="text-slate-400 max-w-sm">
+                Turn your data into actionable insights with the fastest
+                dashboard builder on the market.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-white">Product</h4>
+              <ul className="space-y-2 text-slate-400 text-sm">
+                <li>
+                  <Link href="/pricing" className="hover:text-blue-400">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard" className="hover:text-blue-400">
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/testimonials" className="hover:text-blue-400">
+                    Testimonials
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-white">Company</h4>
+              <ul className="space-y-2 text-slate-400 text-sm">
+                <li>
+                  <Link href="/about" className="hover:text-blue-400">
+                    About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-blue-400">
+                    Contact
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login" className="hover:text-blue-400">
+                    Sign In
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm gap-4">
+            <p>
+              © {new Date().getFullYear()} InsightBoard. All rights reserved.
+            </p>
+            <div className="flex gap-6">
+              <Link
+                href="/terms"
+                className="hover:text-white transition-colors"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                href="/privacy"
+                className="hover:text-white transition-colors"
+              >
+                Privacy Policy
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

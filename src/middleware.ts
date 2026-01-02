@@ -11,9 +11,43 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Public paths that don't require authentication
-  const publicPaths = ['/login', '/register', '/api/auth/login', '/api/users'];
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+  // Routes that redirect to dashboard if already logged in (Guest Only)
+  const guestRoutes = ['/login', '/register'];
+  const isGuestRoute = guestRoutes.some(path => pathname.startsWith(path));
+
+  // 1. API: Strict Blocking
+  const isApiRoute = pathname.startsWith('/api');
+  const isPublicApi = 
+    pathname.startsWith('/api/auth/login') || 
+    pathname.startsWith('/api/stripe/webhook') ||
+    (pathname.startsWith('/api/users') && request.method === 'POST');
+
+  // 2. Pages: Public Access
+  const publicPagePrefixes = [
+      '/pricing', 
+      '/about', 
+      '/contact', 
+      '/testimonials',
+      '/landing',
+      '/login',
+      '/',
+      '/register'
+  ];
+  const isPublicPage = pathname === '/' || publicPagePrefixes.some(path => pathname.startsWith(path));
+
+  // Combined "Public" check for the Guest Redirect logic below
+  // (We consider Guest routes as public for users who ARE NOT logged in)
+  
+  // Redirect authenticated users away from Guest Routes (Login/Register)
+  if (isGuestRoute && token) {
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret');
+      await jwtVerify(token, secret);
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    } catch {
+       // invalid token, treat as guest
+    }
+  }
 
   // Paths accessible even when trial has expired
   const trialExpiredAllowedPaths = [
@@ -21,39 +55,27 @@ export async function middleware(request: NextRequest) {
     '/billing', 
     '/login', 
     '/logout', 
-    '/profile', 
+    '/dashboard/profile',
     '/subscription-success',
     '/subscription-cancelled',
     '/api/stripe/webhook'
   ];
-  
   const isTrialExpiredAllowed = trialExpiredAllowedPaths.some(path => pathname.startsWith(path));
 
-  // Redirect authenticated users away from login/register pages
-  if (isPublicPath && token) {
-    try {
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret');
-      await jwtVerify(token, secret);
-      // Valid token - redirect to dashboard
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    } catch {
-      // Invalid token - allow access to public pages
-    }
-  }
+  const response = NextResponse.next();
 
-  let response = NextResponse.next();
-
-  // Authentication and trial validation for protected routes
-  if (!isPublicPath) {
-    if (!token) {
-      // Allow unauthenticated access to pricing page
-      if (pathname === '/pricing') {
-        response = NextResponse.next();
-      } else {
-        // Redirect to login for all other protected routes
-        response = NextResponse.redirect(new URL('/login', request.url));
+  // Authentication Enforcement
+  if (!token) {
+      // If it's an API route and NOT public -> 401 Unauthorized
+      if (isApiRoute && !isPublicApi) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-    } else {
+      // If it's a Page route and NOT public -> Redirect to Login
+      if (!isApiRoute && !isPublicPage) {
+          return NextResponse.redirect(new URL('/login', request.url));
+      }
+  } else {
+      // Token exists, verify it
       try {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret');
         const { payload } = await jwtVerify(token, secret);
@@ -61,18 +83,21 @@ export async function middleware(request: NextRequest) {
         const trialEndsAt = payload.trialEndsAt ? new Date(payload.trialEndsAt as string) : null;
         const isPaid = payload.isPaid === true;
         
-        // Check if trial has expired and user hasn't paid
-        if (trialEndsAt && new Date() > trialEndsAt && !isPaid) {
+        // Trial Validation
+        if (!isPublicPage && !isApiRoute && trialEndsAt && new Date() > trialEndsAt && !isPaid) {
           if (pathname.startsWith('/dashboard') && !isTrialExpiredAllowed) {
-            // Redirect to pricing page if trial expired
-            response = NextResponse.redirect(new URL('/pricing', request.url));
+            return NextResponse.redirect(new URL('/pricing', request.url));
           }
         }
       } catch {
-        // Invalid token - redirect to login
-        response = NextResponse.redirect(new URL('/login', request.url));
+        // Token invalid
+        if (isApiRoute && !isPublicApi) {
+            return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
+        }
+        if (!isApiRoute && !isPublicPage) {
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
       }
-    }
   }
 
   /**

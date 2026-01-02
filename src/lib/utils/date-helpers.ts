@@ -3,7 +3,7 @@
  * Parses a date from various formats including Excel serial numbers, strings, and Date objects.
  * Excel base date: Dec 30, 1899
  */
-export function parseDate(value: any): Date | null {
+export function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined) return null;
 
   if (value instanceof Date) {
@@ -60,7 +60,7 @@ export function parseDate(value: any): Date | null {
 /**
  * Checks if a column is likely a date column based on a sample of values
  */
-export function isDateColumn(data: any[], col: string): boolean {
+export function isDateColumn(data: Record<string, unknown>[], col: string): boolean {
   if (!data || !data.length) return false;
   
   let validDates = 0;

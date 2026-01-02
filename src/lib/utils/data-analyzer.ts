@@ -47,7 +47,7 @@ export function generateDataSummary(name: string, data: Record<string, unknown>[
     const dateCol = dateColumns[0] || columns.find(c => /month|year/i.test(c)) || columns[0];
 
     // Sort by date if available
-    let sortedData = [...data];
+    const sortedData = [...data];
     if (dateColumns.length > 0) {
         sortedData.sort((a, b) => {
             const dateA = parseDate(a[dateColumns[0]]) || new Date(0);
@@ -71,7 +71,7 @@ export function generateDataSummary(name: string, data: Record<string, unknown>[
     const worstVal = sortedByVal[sortedByVal.length - 1][dateCol];
     
     // Format best/worst values if they are dates
-    const formatVal = (val: any) => {
+    const formatVal = (val: unknown) => {
         const d = parseDate(val);
         return d ? d.toLocaleDateString() : (val as string | number);
     };
